@@ -22,7 +22,8 @@ wandb.init(
 dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
 
 def formatting_prompts_func(example):
-    puzzle_prompt = [
+    puzzle_prompt = {
+        "messages": [
                   {
                     "role": "system",
                     "content": "You are an expert at solving puzzles games.",
@@ -36,6 +37,7 @@ def formatting_prompts_func(example):
                     "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
                 }
                 ]
+    }
 
     return puzzle_prompt
 
