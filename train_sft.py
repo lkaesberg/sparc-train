@@ -22,26 +22,6 @@ wandb.init(
 
 dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
 
-def formatting_prompts_func(example):
-    puzzle_prompt = {
-        "messages": [
-                  {
-                    "role": "system",
-                    "content": "You are an expert at solving puzzles games.",
-                  },
-                  {
-                    "role": "user", 
-                    "content": generate_prompt(example)
-                  },
-                {
-                    "role": "assistant",
-                    "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
-                }
-                ]
-    }
-
-    return puzzle_prompt
-
 training_args = SFTConfig(
     output_dir="./tmp",
     report_to="wandb",
@@ -60,6 +40,26 @@ training_args = SFTConfig(
 model = AutoModelForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model, tokenizer = clone_chat_template(model, tokenizer, model_name)
+
+def formatting_prompts_func(example):
+    puzzle_prompt = {
+        "messages": [
+                  {
+                    "role": "system",
+                    "content": "You are an expert at solving puzzles games.",
+                  },
+                  {
+                    "role": "user", 
+                    "content": generate_prompt(example)
+                  },
+                {
+                    "role": "assistant",
+                    "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
+                }
+                ]
+    }
+
+    return tokenizer.apply_chat_template(puzzle_prompt, tokenize=False)
 
 trainer = SFTTrainer(
     model=model_name,
