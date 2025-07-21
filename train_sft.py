@@ -3,7 +3,6 @@ from trl import SFTConfig, SFTTrainer
 from sparc.prompt import generate_prompt
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from trl.trainer.sft_trainer import clone_chat_template
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -49,18 +48,26 @@ training_args = SFTConfig(
     warmup_steps=100,
     max_steps=1000,
     learning_rate=5e-5,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=4,
+    dataloader_drop_last=True,
+    max_seq_length=4096,
 )
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-model, tokenizer = clone_chat_template(model, tokenizer, model_name)
+# Set pad token if not present
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
 
 trainer = SFTTrainer(
-    model,
+    model=model,
+    tokenizer=tokenizer,
     args=training_args,
     train_dataset=dataset,
     formatting_func=formatting_prompts_func,
+    packing=False,
 )
 
 trainer.train()
