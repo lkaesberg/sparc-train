@@ -4,6 +4,7 @@ from sparc.prompt import generate_prompt
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl.trainer.sft_trainer import clone_chat_template
+import json
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -42,6 +43,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model, tokenizer = clone_chat_template(model, tokenizer, model_name)
 
 def formatting_prompts_func(example):
+    example["polyshape"] = json.dumps(example["polyshape"])
     puzzle_prompt = {
         "messages": [
                   {
