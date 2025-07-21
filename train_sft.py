@@ -56,6 +56,37 @@ def formatting_prompts_func(example):
         if isinstance(first_value, list):
             print(f"First value length: {len(first_value)}")
             print("This appears to be BATCHED data")
+            
+            # Handle batched data - return list of formatted texts
+            formatted_texts = []
+            batch_size = len(first_value)
+            
+            for i in range(batch_size):
+                # Extract individual example from batch
+                individual_example = {key: values[i] for key, values in example.items()}
+                
+                puzzle_prompt = {
+                    "messages": [
+                              {
+                                "role": "system",
+                                "content": "You are an expert at solving puzzles games.",
+                              },
+                              {
+                                "role": "user", 
+                                "content": generate_prompt(individual_example)
+                              },
+                            {
+                                "role": "assistant",
+                                "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', individual_example['solutions'][0]['path']))})"
+                            }
+                            ]
+                }
+                
+                formatted_text = tokenizer.apply_chat_template(puzzle_prompt, tokenize=False)
+                formatted_texts.append(formatted_text)
+            
+            print(f"Returning {len(formatted_texts)} formatted texts")
+            return formatted_texts
         else:
             print("This appears to be INDIVIDUAL data")
     
