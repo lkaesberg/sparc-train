@@ -36,6 +36,7 @@ training_args = SFTConfig(
     gradient_accumulation_steps=4,
     dataloader_drop_last=True,
     max_seq_length=4096,
+    packing=False,
 )
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
