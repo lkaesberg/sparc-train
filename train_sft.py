@@ -43,8 +43,8 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model, tokenizer = clone_chat_template(model, tokenizer, model_name)
 
 def formatting_prompts_func(example):
-    print(example)
-    example["polyshapes"] = json.dumps(example["polyshapes"])
+    if not example["puzzle_type"]:
+        example["polyshapes"] = None
     puzzle_prompt = {
         "messages": [
                   {
