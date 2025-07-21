@@ -30,14 +30,9 @@ training_args = SFTConfig(
     save_steps=500,
     eval_steps=500,
     warmup_steps=100,
-    max_steps=1000,
+    max_steps=10000,
     learning_rate=5e-5,
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=16,
-    max_seq_length=2048,
-    remove_unused_columns=False,
-    group_by_length=True,
-    optim="adamw_torch",
+    max_seq_length=4096,
 )
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
