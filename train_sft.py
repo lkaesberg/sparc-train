@@ -7,6 +7,7 @@ model = "Qwen/Qwen3-0.6B"
 
 # Initialize wandb
 wandb.init(
+    entity="larskaesberg-university-of-g-ttingen",
     project="sparc-sft",
     name=f"{model}-sparc-sft",
     config={
