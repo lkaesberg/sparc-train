@@ -1,0 +1,46 @@
+name: sparc-train
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - pandas
+  - matplotlib
+  - seaborn
+  - jupyter
+  - ipykernel
+  
+  # PyTorch and CUDA (adjust cuda version as needed)
+  - pytorch>=2.0.0
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=11.8
+  
+  # Hugging Face ecosystem
+  - transformers>=4.30.0
+  - tokenizers
+  - accelerate
+  
+  # Additional ML dependencies
+  - scikit-learn
+  - scipy
+  
+  # Development tools
+  - black
+  - flake8
+  - pytest
+  
+  # Pip dependencies
+  - pip:
+    - datasets>=2.14.0
+    - trl>=0.7.0
+    - wandb>=0.15.0
+    - peft>=0.4.0
+    - bitsandbytes
+    - einops
+    - sparc 
