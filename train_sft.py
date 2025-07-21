@@ -58,8 +58,7 @@ trainer = SFTTrainer(
     model=model_name,
     args=training_args,
     train_dataset=dataset,
-    formatting_func=formatting_prompts_func,
-    packing=False,
+    formatting_func=formatting_prompts_func
 )
 
 trainer.train()
