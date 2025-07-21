@@ -54,16 +54,8 @@ training_args = SFTConfig(
     max_seq_length=4096,
 )
 
-model = AutoModelForCausalLM.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-# Set pad token if not present
-if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
-
 trainer = SFTTrainer(
-    model=model,
-    tokenizer=tokenizer,
+    model=model_name,
     args=training_args,
     train_dataset=dataset,
     formatting_func=formatting_prompts_func,
