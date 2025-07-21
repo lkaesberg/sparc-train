@@ -2,16 +2,18 @@ from datasets import load_dataset
 from trl import SFTConfig, SFTTrainer
 from sparc.prompt import generate_prompt
 import wandb
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from trl.trainer.sft_trainer import clone_chat_template
 
-model = "Qwen/Qwen3-0.6B"
+model_name = "Qwen/Qwen3-0.6B"
 
 # Initialize wandb
 wandb.init(
     entity="larskaesberg-university-of-g-ttingen",
     project="sparc-sft",
-    name=f"{model}-sparc-sft",
+    name=f"{model_name}-sparc-sft",
     config={
-        "model": model,
+        "model": model_name,
         "dataset": "lkaesberg/SPaRC",
         "task": "supervised_fine_tuning"
     }
@@ -39,7 +41,7 @@ def formatting_prompts_func(example):
     return puzzle_prompt
 
 training_args = SFTConfig(
-    output_dir="/tmp",
+    output_dir="./tmp",
     report_to="wandb",
     logging_steps=10,
     save_steps=500,
@@ -48,6 +50,11 @@ training_args = SFTConfig(
     max_steps=1000,
     learning_rate=5e-5,
 )
+
+model = AutoModelForCausalLM.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+model, tokenizer = clone_chat_template(model, tokenizer, model_name)
 
 trainer = SFTTrainer(
     model,
