@@ -43,31 +43,38 @@ model = AutoModelForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model, tokenizer = clone_chat_template(model, tokenizer, model_name)
 
-def formatting_prompts_func(example):
-    example["polyshapes"] = json.dumps(example["polyshapes"])
-    if type(json.loads(example["polyshapes"])) == list:
-        print(example["polyshapes"])
-        print(json.loads(example["polyshapes"]))
-        print(type(example["polyshapes"]), type(json.loads(example["polyshapes"])))
-        example["polyshapes"] = {}
-    puzzle_prompt = {
-        "messages": [
-                  {
-                    "role": "system",
-                    "content": "You are an expert at solving puzzles games.",
-                  },
-                  {
-                    "role": "user", 
-                    "content": generate_prompt(example)
-                  },
-                {
-                    "role": "assistant",
-                    "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
-                }
-                ]
-    }
-
-    return tokenizer.apply_chat_template(puzzle_prompt, tokenize=False)
+def formatting_prompts_func(examples):
+    # Handle batched examples - each field is a list
+    formatted_texts = []
+    
+    # Get the batch size from any field
+    batch_size = len(examples['solutions'])
+    
+    for i in range(batch_size):
+        # Extract individual example from the batch
+        example = {key: values[i] for key, values in examples.items()}
+        
+        puzzle_prompt = {
+            "messages": [
+                      {
+                        "role": "system",
+                        "content": "You are an expert at solving puzzles games.",
+                      },
+                      {
+                        "role": "user", 
+                        "content": generate_prompt(example)
+                      },
+                    {
+                        "role": "assistant",
+                        "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
+                    }
+                    ]
+        }
+        
+        formatted_text = tokenizer.apply_chat_template(puzzle_prompt, tokenize=False)
+        formatted_texts.append(formatted_text)
+    
+    return formatted_texts
 
 trainer = SFTTrainer(
     model=model_name,
