@@ -43,38 +43,43 @@ model = AutoModelForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model, tokenizer = clone_chat_template(model, tokenizer, model_name)
 
-def formatting_prompts_func(examples):
-    # Handle batched examples - each field is a list
-    formatted_texts = []
+def formatting_prompts_func(example):
+    # Debug: Print the type and structure of the example
+    print(f"Example type: {type(example)}")
+    print(f"Example keys: {list(example.keys()) if isinstance(example, dict) else 'Not a dict'}")
     
-    # Get the batch size from any field
-    batch_size = len(examples['solutions'])
+    # Check if it's a batched format (lists) or individual format
+    if isinstance(example, dict) and len(example) > 0:
+        first_key = list(example.keys())[0]
+        first_value = example[first_key]
+        print(f"First value type: {type(first_value)}")
+        if isinstance(first_value, list):
+            print(f"First value length: {len(first_value)}")
+            print("This appears to be BATCHED data")
+        else:
+            print("This appears to be INDIVIDUAL data")
     
-    for i in range(batch_size):
-        # Extract individual example from the batch
-        example = {key: values[i] for key, values in examples.items()}
-        
-        puzzle_prompt = {
-            "messages": [
-                      {
-                        "role": "system",
-                        "content": "You are an expert at solving puzzles games.",
-                      },
-                      {
-                        "role": "user", 
-                        "content": generate_prompt(example)
-                      },
-                    {
-                        "role": "assistant",
-                        "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
-                    }
-                    ]
-        }
-        
-        formatted_text = tokenizer.apply_chat_template(puzzle_prompt, tokenize=False)
-        formatted_texts.append(formatted_text)
+    # Handle individual example (not batched)
+    puzzle_prompt = {
+        "messages": [
+                  {
+                    "role": "system",
+                    "content": "You are an expert at solving puzzles games.",
+                  },
+                  {
+                    "role": "user", 
+                    "content": generate_prompt(example)
+                  },
+                {
+                    "role": "assistant",
+                    "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
+                }
+                ]
+    }
     
-    return formatted_texts
+    formatted_text = tokenizer.apply_chat_template(puzzle_prompt, tokenize=False)
+    print(f"Formatted text preview: {formatted_text[:100]}...")
+    return formatted_text
 
 trainer = SFTTrainer(
     model=model_name,
