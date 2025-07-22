@@ -6,7 +6,6 @@ import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import re
 import numpy as np
-from accelerate import PartialState
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -35,10 +34,9 @@ training_args = SFTConfig(
     warmup_steps=100,
     max_steps=1000,
     learning_rate=5e-5,
-    per_device_train_batch_size=4,  # Increased for multi-GPU
-    per_device_eval_batch_size=4,   # Added eval batch size
-    gradient_accumulation_steps=4,  # Reduced since we have more GPUs
-    max_seq_length=2048,
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=16,
+    max_seq_length=4096,
     remove_unused_columns=False,
     group_by_length=True,
     optim="adamw_torch_fused",  # Better performance than adamw_torch
@@ -50,18 +48,9 @@ training_args = SFTConfig(
     metric_for_best_model="solution_accuracy",  # Use your custom metric
     greater_is_better=True,  # Higher solution_accuracy is better
     save_total_limit=3,  # Keep only 3 best checkpoints
-    dataloader_pin_memory=True,  # Improve data loading performance
-    dataloader_num_workers=4,   # Parallel data loading
 )
 
-# Multi-GPU device placement
-device_string = PartialState().process_index
-
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    device_map={'': device_string},  # Proper device mapping for multi-GPU
-    torch_dtype=None,  # Let accelerate handle dtype
-)
+model = AutoModelForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # Set up the chat format with default 'chatml' format (modern approach)
