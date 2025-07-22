@@ -4,6 +4,7 @@ from sparc.prompt import generate_prompt
 from sparc.validation import extract_solution_path, validate_solution, analyze_path
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from accelerate import PartialState  # Add for multi-GPU support
 import re
 import numpy as np
 
@@ -43,14 +44,20 @@ training_args = SFTConfig(
     gradient_checkpointing=True,  # Reduce memory usage
     bf16=True,  # Use bfloat16 for better performance if supported
     save_strategy="steps",  # Save based on steps, not epochs
-    evaluation_strategy="steps",  # Evaluate based on steps
+    eval_strategy="steps",  # Evaluate based on steps
     load_best_model_at_end=True,  # Load best model at end of training
     metric_for_best_model="solution_accuracy",  # Use your custom metric
     greater_is_better=True,  # Higher solution_accuracy is better
     save_total_limit=3,  # Keep only 3 best checkpoints
+    ddp_find_unused_parameters=False,  # Optimize for multi-GPU
 )
 
-model = AutoModelForCausalLM.from_pretrained(model_name)
+# Multi-GPU device setup
+device_string = PartialState().process_index
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map={'': device_string}  # Proper device placement for multi-GPU
+)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # Set up the chat format with default 'chatml' format (modern approach)
