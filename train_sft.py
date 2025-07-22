@@ -119,6 +119,16 @@ training_args = SFTConfig(
     fp16_full_eval=False,  # Don't use fp16 during eval to avoid precision issues
     dataloader_num_workers=0,  # Disable multiprocessing to save memory
     prediction_loss_only=False,  # We need predictions for custom metrics
+    
+    # CRITICAL: Enable padding-free batching for massive memory savings
+    padding_free=True,  # Eliminates padding completely, huge memory reduction
+    
+    # Use flash attention for better memory efficiency
+    model_init_kwargs={"attn_implementation": "flash_attention_2"},
+    
+    # Additional memory optimizations
+    eval_on_start=False,  # Don't evaluate at start
+    include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
 )
 
 # Multi-GPU device setup
@@ -233,12 +243,12 @@ def create_compute_metrics(eval_dataset):
             if is_main_process and torch.cuda.is_available():
                 print(f"DEBUG: CUDA memory after detaching: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
             
-            # Process only the first few predictions to minimize memory usage
+
             decoded_preds = []
             num_predictions = len(predictions) if hasattr(predictions, '__len__') else predictions.shape[0]
             
             if is_main_process:
-                print(f"DEBUG: Processing {num_predictions} predictions one by one")
+                print(f"DEBUG: Processing only {num_predictions} predictions")
             
             for i in range(num_predictions):
                 try:
@@ -329,7 +339,7 @@ def create_compute_metrics(eval_dataset):
                 }
             
             if is_main_process:
-                print(f"DEBUG: Evaluating {total_paths} samples (extreme memory conservation mode)")
+                print(f"DEBUG: Evaluating {total_paths} samples")
             
             # Process each evaluation sample individually
             for i in range(total_paths):
