@@ -1,12 +1,12 @@
 from datasets import load_dataset
-from trl import SFTConfig, SFTTrainer
+from trl import SFTConfig, SFTTrainer, setup_chat_format
 from sparc.prompt import generate_prompt
 from sparc.validation import extract_solution_path, validate_solution, analyze_path
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from trl.trainer.sft_trainer import clone_chat_template
 import re
 import numpy as np
+from accelerate import PartialState
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -31,21 +31,45 @@ training_args = SFTConfig(
     report_to="wandb",
     logging_steps=10,
     save_steps=500,
-    eval_steps=100,
+    eval_steps=500,
     warmup_steps=100,
     max_steps=1000,
     learning_rate=5e-5,
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=16,
-    max_seq_length=4096,
+    per_device_train_batch_size=4,  # Increased for multi-GPU
+    per_device_eval_batch_size=4,   # Added eval batch size
+    gradient_accumulation_steps=4,  # Reduced since we have more GPUs
+    max_seq_length=2048,
     remove_unused_columns=False,
     group_by_length=True,
-    optim="adamw_torch",
+    optim="adamw_torch_fused",  # Better performance than adamw_torch
+    gradient_checkpointing=True,  # Reduce memory usage
+    bf16=True,  # Use bfloat16 for better performance if supported
+    save_strategy="steps",  # Save based on steps, not epochs
+    evaluation_strategy="steps",  # Evaluate based on steps
+    load_best_model_at_end=True,  # Load best model at end of training
+    metric_for_best_model="solution_accuracy",  # Use your custom metric
+    greater_is_better=True,  # Higher solution_accuracy is better
+    save_total_limit=3,  # Keep only 3 best checkpoints
+    dataloader_pin_memory=True,  # Improve data loading performance
+    dataloader_num_workers=4,   # Parallel data loading
 )
 
-model = AutoModelForCausalLM.from_pretrained(model_name)
+# Multi-GPU device placement
+device_string = PartialState().process_index
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map={'': device_string},  # Proper device mapping for multi-GPU
+    torch_dtype=None,  # Let accelerate handle dtype
+)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model, tokenizer = clone_chat_template(model, tokenizer, model_name)
+
+# Set up the chat format with default 'chatml' format (modern approach)
+model, tokenizer = setup_chat_format(model, tokenizer)
+
+# Set pad token if not present
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
 
 def formatting_prompts_func(examples):
     # Handle both individual and batched calls from SFTTrainer

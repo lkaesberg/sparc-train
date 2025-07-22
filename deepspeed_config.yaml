@@ -1,0 +1,17 @@
+compute_environment: LOCAL_MACHINE
+distributed_type: DEEPSPEED
+num_processes: 4  # Number of GPUs
+gpu_ids: 0,1,2,3  # Your GPU IDs
+machine_rank: 0
+num_machines: 1
+main_training_function: main
+mixed_precision: bf16
+use_cpu: false
+debug: false
+deepspeed_config:
+  gradient_accumulation_steps: 4
+  offload_optimizer_device: "none"  # Set to "cpu" for very large models
+  offload_param_device: "none"      # Set to "cpu" for very large models
+  zero3_init_flag: false
+  zero_stage: 2  # Use ZeRO stage 2 for optimizer state partitioning
+downcast_bf16: no 
