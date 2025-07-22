@@ -7,6 +7,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from accelerate import PartialState  # Add for multi-GPU support
 import re
 import numpy as np
+from transformers import TrainerCallback
+
+class DebugEvaluationCallback(TrainerCallback):
+    """Custom callback to debug evaluation events"""
+    
+    def on_evaluate(self, args, state, control, model=None, tokenizer=None, **kwargs):
+        print(f"DEBUG: Evaluation started at step {state.global_step}")
+    
+    def on_log(self, args, state, control, model=None, tokenizer=None, logs=None, **kwargs):
+        if logs and any(key.startswith('eval_') for key in logs.keys()):
+            print(f"DEBUG: Evaluation metrics logged at step {state.global_step}: {logs}")
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -31,11 +42,12 @@ training_args = SFTConfig(
     report_to="wandb",
     logging_steps=10,
     save_steps=500,
-    eval_steps=500,
+    eval_steps=100,  # Evaluate more frequently to see metrics sooner
     warmup_steps=100,
     max_steps=1000,
     learning_rate=5e-5,
     per_device_train_batch_size=1,
+    per_device_eval_batch_size=1,  # Add explicit eval batch size
     gradient_accumulation_steps=16,
     max_seq_length=4096,
     remove_unused_columns=False,
@@ -45,11 +57,15 @@ training_args = SFTConfig(
     bf16=True,  # Use bfloat16 for better performance if supported
     save_strategy="steps",  # Save based on steps, not epochs
     eval_strategy="steps",  # Evaluate based on steps
+    do_eval=True,  # Explicitly enable evaluation
     load_best_model_at_end=True,  # Load best model at end of training
-    metric_for_best_model="solution_accuracy",  # Use your custom metric
+    metric_for_best_model="eval_solution_accuracy",  # Use your custom metric with eval_ prefix
     greater_is_better=True,  # Higher solution_accuracy is better
     save_total_limit=3,  # Keep only 3 best checkpoints
     ddp_find_unused_parameters=False,  # Optimize for multi-GPU
+    logging_dir="./logs",  # Add logging directory
+    logging_first_step=True,  # Log the first step
+    dataloader_pin_memory=False,  # Disable pin memory to avoid potential issues
 )
 
 # Multi-GPU device setup
@@ -124,10 +140,47 @@ def formatting_prompts_func(examples):
 def create_compute_metrics(eval_dataset):
     """Create a compute_metrics function that has access to the dataset"""
     def compute_metrics(eval_pred):
+        print(f"\nDEBUG: compute_metrics called with eval_pred type: {type(eval_pred)}")
         predictions, labels = eval_pred
         
+        print(f"DEBUG: predictions shape: {predictions.shape if hasattr(predictions, 'shape') else 'no shape'}")
+        print(f"DEBUG: predictions type: {type(predictions)}")
+        
+        # Handle the case where predictions might be nested tuples/lists from SFTTrainer
+        if isinstance(predictions, tuple):
+            predictions = predictions[0]
+        
+        # Convert to numpy if it's a tensor
+        if hasattr(predictions, 'cpu'):
+            predictions = predictions.cpu().numpy()
+        
+        # Decode predictions - SFTTrainer passes logits, so we need to get the argmax
+        if len(predictions.shape) > 2:
+            # If predictions are logits [batch_size, seq_len, vocab_size]
+            predicted_ids = predictions.argmax(axis=-1)
+        else:
+            # If predictions are already token IDs
+            predicted_ids = predictions
+        
         # Decode predictions only (we'll get ground truth from dataset)
-        decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+        try:
+            decoded_preds = tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
+        except Exception as e:
+            print(f"DEBUG: Error decoding predictions: {e}")
+            # Fallback: try to process each sequence individually
+            decoded_preds = []
+            for seq in predicted_ids:
+                try:
+                    decoded = tokenizer.decode(seq, skip_special_tokens=True)
+                    decoded_preds.append(decoded)
+                except Exception as seq_e:
+                    print(f"DEBUG: Error decoding sequence: {seq_e}")
+                    decoded_preds.append("")
+        
+        # Debug: Print some examples to see what we're getting
+        print(f"\nDEBUG: Number of predictions: {len(decoded_preds)}")
+        if len(decoded_preds) > 0:
+            print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
         
         # Initialize counters
         correct_solutions = 0
@@ -139,7 +192,24 @@ def create_compute_metrics(eval_dataset):
         no_rule_crossing = 0
         total_paths = len(decoded_preds)
         
-        for i, pred in enumerate(decoded_preds):
+        # Ensure we don't go beyond the eval dataset size
+        total_paths = min(total_paths, len(eval_dataset))
+        
+        if total_paths == 0:
+            print("DEBUG: No predictions to evaluate")
+            return {
+                "eval_solution_accuracy": 0.0,
+                "eval_valid_path_rate": 0.0,
+                "eval_start_end_accuracy": 0.0,
+                "eval_connection_rate": 0.0,
+                "eval_non_intersection_rate": 0.0,
+                "eval_rule_compliance_rate": 0.0,
+                "eval_correct_solutions": 0,
+                "eval_valid_paths": 0,
+                "eval_total_evaluated": 0
+            }
+        
+        for i, pred in enumerate(decoded_preds[:total_paths]):
             # Get the original dataset entry (puzzle)
             puzzle = eval_dataset[i]
             
@@ -171,26 +241,41 @@ def create_compute_metrics(eval_dataset):
                         
             except Exception as e:
                 # Handle cases where path extraction fails
-                print(f"Error: {e}")
+                print(f"Error in metrics computation for sample {i}: {e}")
                 continue
         
         # Calculate metrics as percentages
-        return {
-            "solution_accuracy": correct_solutions / total_paths if total_paths > 0 else 0,
-            "valid_path_rate": valid_paths / total_paths if total_paths > 0 else 0,
-            "start_end_accuracy": starts_correctly / total_paths if total_paths > 0 else 0,
-            "connection_rate": connected_paths / total_paths if total_paths > 0 else 0,
-            "non_intersection_rate": non_intersecting / total_paths if total_paths > 0 else 0,
-            "rule_compliance_rate": no_rule_crossing / total_paths if total_paths > 0 else 0,
-            "correct_solutions": correct_solutions,
-            "valid_paths": valid_paths,
-            "total_evaluated": total_paths
+        metrics = {
+            "eval_solution_accuracy": correct_solutions / total_paths if total_paths > 0 else 0,
+            "eval_valid_path_rate": valid_paths / total_paths if total_paths > 0 else 0,
+            "eval_start_end_accuracy": starts_correctly / total_paths if total_paths > 0 else 0,
+            "eval_connection_rate": connected_paths / total_paths if total_paths > 0 else 0,
+            "eval_non_intersection_rate": non_intersecting / total_paths if total_paths > 0 else 0,
+            "eval_rule_compliance_rate": no_rule_crossing / total_paths if total_paths > 0 else 0,
+            "eval_correct_solutions": correct_solutions,
+            "eval_valid_paths": valid_paths,
+            "eval_total_evaluated": total_paths
         }
+        
+        # Debug: Print metrics
+        print(f"DEBUG: Computed metrics: {metrics}")
+        
+        # Also log to wandb directly as a backup
+        if wandb.run:
+            wandb.log(metrics)
+            print(f"DEBUG: Metrics logged to wandb")
+        
+        return metrics
     
     return compute_metrics
 
 # Create the compute_metrics function with access to eval dataset
 compute_metrics_fn = create_compute_metrics(eval_dataset)
+
+print(f"DEBUG: Eval dataset size: {len(eval_dataset)}")
+print(f"DEBUG: Train dataset size: {len(dataset)}")
+print(f"DEBUG: Model device: {model.device}")
+print(f"DEBUG: Wandb project: {wandb.run.project if wandb.run else 'No active run'}")
 
 trainer = SFTTrainer(
     model=model,
@@ -200,6 +285,8 @@ trainer = SFTTrainer(
     eval_dataset=eval_dataset,
     formatting_func=formatting_prompts_func,
     compute_metrics=compute_metrics_fn,
+    callbacks=[DebugEvaluationCallback()],
 )
 
+print("DEBUG: Starting training...")
 trainer.train()
