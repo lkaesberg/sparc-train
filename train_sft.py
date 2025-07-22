@@ -14,33 +14,44 @@ class DebugEvaluationCallback(TrainerCallback):
     """Custom callback to debug evaluation events and manage memory"""
     
     def on_evaluate(self, args, state, control, model=None, tokenizer=None, **kwargs):
-        print(f"DEBUG: Evaluation started at step {state.global_step}")
+        if is_main_process:  # Only print on main process
+            print(f"DEBUG: Evaluation started at step {state.global_step}")
         # Clear CUDA cache before evaluation
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            print(f"DEBUG: CUDA cache cleared before evaluation")
+            if is_main_process:
+                print(f"DEBUG: CUDA cache cleared before evaluation")
     
     def on_log(self, args, state, control, model=None, tokenizer=None, logs=None, **kwargs):
-        if logs and any(key.startswith('eval_') for key in logs.keys()):
+        if logs and any(key.startswith('eval_') for key in logs.keys()) and is_main_process:
             print(f"DEBUG: Evaluation metrics logged at step {state.global_step}: {logs}")
-            # Clear CUDA cache after evaluation logging
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        # Clear CUDA cache after evaluation logging
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            if is_main_process and logs and any(key.startswith('eval_') for key in logs.keys()):
                 print(f"DEBUG: CUDA cache cleared after evaluation")
 
 model_name = "Qwen/Qwen3-0.6B"
 
-# Initialize wandb
-wandb.init(
-    entity="larskaesberg-university-of-g-ttingen",
-    project="sparc-sft",
-    name=f"{model_name}-sparc-sft",
-    config={
-        "model": model_name,
-        "dataset": "lkaesberg/SPaRC",
-        "task": "supervised_fine_tuning"
-    }
-)
+# Multi-GPU device setup - get this early to check if we're main process
+device_string = PartialState().process_index
+is_main_process = PartialState().is_main_process
+
+# Initialize wandb only on main process
+if is_main_process:
+    wandb.init(
+        entity="larskaesberg-university-of-g-ttingen",
+        project="sparc-sft",
+        name=f"{model_name}-sparc-sft",
+        config={
+            "model": model_name,
+            "dataset": "lkaesberg/SPaRC",
+            "task": "supervised_fine_tuning"
+        }
+    )
+    print(f"DEBUG: Wandb initialized on main process (rank {device_string})")
+else:
+    print(f"DEBUG: Skipping wandb initialization on worker process (rank {device_string})")
 
 
 dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
@@ -49,11 +60,12 @@ eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test")
 # Limit evaluation dataset size to prevent memory issues
 max_eval_size = 100  # Limit to 100 samples for evaluation
 if len(eval_dataset) > max_eval_size:
-    print(f"DEBUG: Limiting eval dataset from {len(eval_dataset)} to {max_eval_size} samples for memory efficiency")
+    if is_main_process:  # Only print on main process
+        print(f"DEBUG: Limiting eval dataset from {len(eval_dataset)} to {max_eval_size} samples for memory efficiency")
     eval_dataset = eval_dataset.select(range(max_eval_size))
 
-# Print memory info if available
-if torch.cuda.is_available():
+# Print memory info if available (only on main process)
+if torch.cuda.is_available() and is_main_process:
     print(f"DEBUG: CUDA memory allocated before training: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
     print(f"DEBUG: CUDA memory reserved before training: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
 
@@ -91,7 +103,6 @@ training_args = SFTConfig(
 )
 
 # Multi-GPU device setup
-device_string = PartialState().process_index
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map={'': device_string}  # Proper device placement for multi-GPU
@@ -168,11 +179,13 @@ def create_compute_metrics(eval_dataset):
         
         # Ensure no gradients are computed during evaluation
         with torch.no_grad():
-            print(f"\nDEBUG: compute_metrics called with eval_pred type: {type(eval_pred)}")
+            if is_main_process:  # Only print debug on main process
+                print(f"\nDEBUG: compute_metrics called with eval_pred type: {type(eval_pred)}")
             predictions, labels = eval_pred
             
-            print(f"DEBUG: predictions shape: {predictions.shape if hasattr(predictions, 'shape') else 'no shape'}")
-            print(f"DEBUG: predictions type: {type(predictions)}")
+            if is_main_process:
+                print(f"DEBUG: predictions shape: {predictions.shape if hasattr(predictions, 'shape') else 'no shape'}")
+                print(f"DEBUG: predictions type: {type(predictions)}")
             
             # Handle the case where predictions might be nested tuples/lists from SFTTrainer
             if isinstance(predictions, tuple):
@@ -204,24 +217,27 @@ def create_compute_metrics(eval_dataset):
                     chunk_decoded = tokenizer.batch_decode(chunk, skip_special_tokens=True)
                     decoded_preds.extend(chunk_decoded)
                 except Exception as e:
-                    print(f"DEBUG: Error decoding chunk {i//chunk_size}: {e}")
+                    if is_main_process:
+                        print(f"DEBUG: Error decoding chunk {i//chunk_size}: {e}")
                     # Fallback: try to process each sequence individually
                     for seq in chunk:
                         try:
                             decoded = tokenizer.decode(seq, skip_special_tokens=True)
                             decoded_preds.append(decoded)
                         except Exception as seq_e:
-                            print(f"DEBUG: Error decoding sequence: {seq_e}")
+                            if is_main_process:
+                                print(f"DEBUG: Error decoding sequence: {seq_e}")
                             decoded_preds.append("")
                 
                 # Clear cache between chunks
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
             
-            # Debug: Print some examples to see what we're getting
-            print(f"\nDEBUG: Number of predictions: {len(decoded_preds)}")
-            if len(decoded_preds) > 0:
-                print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
+            # Debug: Print some examples to see what we're getting (only main process)
+            if is_main_process:
+                print(f"\nDEBUG: Number of predictions: {len(decoded_preds)}")
+                if len(decoded_preds) > 0:
+                    print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
             
             # Limit evaluation to a subset to save memory (max 50 samples)
             max_eval_samples = min(50, len(decoded_preds), len(eval_dataset))
@@ -237,7 +253,8 @@ def create_compute_metrics(eval_dataset):
             total_paths = max_eval_samples
             
             if total_paths == 0:
-                print("DEBUG: No predictions to evaluate")
+                if is_main_process:
+                    print("DEBUG: No predictions to evaluate")
                 return {
                     "eval_solution_accuracy": 0.0,
                     "eval_valid_path_rate": 0.0,
@@ -250,7 +267,8 @@ def create_compute_metrics(eval_dataset):
                     "eval_total_evaluated": 0
                 }
             
-            print(f"DEBUG: Evaluating {total_paths} samples (limited for memory)")
+            if is_main_process:
+                print(f"DEBUG: Evaluating {total_paths} samples (limited for memory)")
             
             for i in range(total_paths):
                 pred = decoded_preds[i]
@@ -285,7 +303,8 @@ def create_compute_metrics(eval_dataset):
                             
                 except Exception as e:
                     # Handle cases where path extraction fails
-                    print(f"Error in metrics computation for sample {i}: {e}")
+                    if is_main_process:
+                        print(f"Error in metrics computation for sample {i}: {e}")
                     continue
             
             # Calculate metrics as percentages
@@ -301,11 +320,12 @@ def create_compute_metrics(eval_dataset):
                 "eval_total_evaluated": total_paths
             }
             
-            # Debug: Print metrics
-            print(f"DEBUG: Computed metrics: {metrics}")
+            # Debug: Print metrics (only main process)
+            if is_main_process:
+                print(f"DEBUG: Computed metrics: {metrics}")
             
-            # Also log to wandb directly as a backup
-            if wandb.run:
+            # Only log to wandb from main process
+            if wandb.run and is_main_process:
                 wandb.log(metrics)
                 print(f"DEBUG: Metrics logged to wandb")
             
@@ -320,10 +340,11 @@ def create_compute_metrics(eval_dataset):
 # Create the compute_metrics function with access to eval dataset
 compute_metrics_fn = create_compute_metrics(eval_dataset)
 
-print(f"DEBUG: Eval dataset size: {len(eval_dataset)}")
-print(f"DEBUG: Train dataset size: {len(dataset)}")
-print(f"DEBUG: Model device: {model.device}")
-print(f"DEBUG: Wandb project: {wandb.run.project if wandb.run else 'No active run'}")
+if is_main_process:  # Only print debug info on main process
+    print(f"DEBUG: Eval dataset size: {len(eval_dataset)}")
+    print(f"DEBUG: Train dataset size: {len(dataset)}")
+    print(f"DEBUG: Model device: {model.device}")
+    print(f"DEBUG: Wandb project: {wandb.run.project if wandb.run else 'No active run'}")
 
 trainer = SFTTrainer(
     model=model,
@@ -336,12 +357,15 @@ trainer = SFTTrainer(
     callbacks=[DebugEvaluationCallback()],
 )
 
-print("DEBUG: Starting training...")
+if is_main_process:
+    print("DEBUG: Starting training...")
 trainer.train()
 
 # Clean up memory after training
-print("DEBUG: Training completed. Cleaning up memory...")
+if is_main_process:
+    print("DEBUG: Training completed. Cleaning up memory...")
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
-    print(f"DEBUG: CUDA memory allocated after training: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-    print(f"DEBUG: CUDA memory reserved after training: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+    if is_main_process:
+        print(f"DEBUG: CUDA memory allocated after training: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+        print(f"DEBUG: CUDA memory reserved after training: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
