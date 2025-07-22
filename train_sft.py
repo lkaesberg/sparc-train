@@ -1,4 +1,5 @@
 import torch
+import gc
 from datasets import load_dataset
 from trl import SFTConfig, SFTTrainer, setup_chat_format
 from sparc.prompt import generate_prompt
@@ -11,25 +12,34 @@ import numpy as np
 from transformers import TrainerCallback
 
 class DebugEvaluationCallback(TrainerCallback):
-    """Custom callback to debug evaluation events and manage memory"""
+    """Custom callback to debug evaluation events and manage memory aggressively"""
     
     def on_evaluate(self, args, state, control, model=None, tokenizer=None, **kwargs):
         if is_main_process:  # Only print on main process
             print(f"DEBUG: Evaluation started at step {state.global_step}")
-        # Clear CUDA cache before evaluation
+        
+        # Aggressive memory cleanup before evaluation
+        gc.collect()  # Force garbage collection
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.synchronize()  # Wait for all operations to complete
             if is_main_process:
-                print(f"DEBUG: CUDA cache cleared before evaluation")
+                print(f"DEBUG: Aggressive memory cleanup before evaluation")
+                print(f"DEBUG: CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
     
     def on_log(self, args, state, control, model=None, tokenizer=None, logs=None, **kwargs):
         if logs and any(key.startswith('eval_') for key in logs.keys()) and is_main_process:
             print(f"DEBUG: Evaluation metrics logged at step {state.global_step}: {logs}")
-        # Clear CUDA cache after evaluation logging
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            if is_main_process and logs and any(key.startswith('eval_') for key in logs.keys()):
-                print(f"DEBUG: CUDA cache cleared after evaluation")
+        
+        # Aggressive memory cleanup after evaluation
+        if logs and any(key.startswith('eval_') for key in logs.keys()):
+            gc.collect()  # Force garbage collection
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()  # Wait for all operations to complete
+                if is_main_process:
+                    print(f"DEBUG: Aggressive memory cleanup after evaluation")
+                    print(f"DEBUG: CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -68,6 +78,13 @@ if len(eval_dataset) > max_eval_size:
 if torch.cuda.is_available() and is_main_process:
     print(f"DEBUG: CUDA memory allocated before training: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
     print(f"DEBUG: CUDA memory reserved before training: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+    print(f"DEBUG: CUDA memory total: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
+    
+    # Force cleanup before training
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+    print(f"DEBUG: After cleanup - CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
 
 training_args = SFTConfig(
     output_dir="./tmp",
@@ -79,8 +96,8 @@ training_args = SFTConfig(
     max_steps=1000,
     learning_rate=5e-5,
     per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,  # Keep eval batch size small
-    eval_accumulation_steps=1,  # Process eval in smaller steps
+    per_device_eval_batch_size=1,  # Keep eval batch size at absolute minimum
+    eval_accumulation_steps=1,  # Process eval in smallest possible steps
     gradient_accumulation_steps=16,
     max_seq_length=2048,  # Reduce sequence length to save memory
     remove_unused_columns=False,
@@ -91,7 +108,7 @@ training_args = SFTConfig(
     save_strategy="steps",  # Save based on steps, not epochs
     eval_strategy="steps",  # Evaluate based on steps
     do_eval=True,  # Explicitly enable evaluation
-    load_best_model_at_end=True,  # Load best model at end of training
+    load_best_model_at_end=False,  # Disable to save memory
     metric_for_best_model="eval_solution_accuracy",  # Use your custom metric with eval_ prefix
     greater_is_better=True,  # Higher solution_accuracy is better
     save_total_limit=2,  # Keep only 2 best checkpoints to save disk space
@@ -100,6 +117,8 @@ training_args = SFTConfig(
     logging_first_step=True,  # Log the first step
     dataloader_pin_memory=False,  # Disable pin memory to avoid potential issues
     fp16_full_eval=False,  # Don't use fp16 during eval to avoid precision issues
+    dataloader_num_workers=0,  # Disable multiprocessing to save memory
+    prediction_loss_only=False,  # We need predictions for custom metrics
 )
 
 # Multi-GPU device setup
@@ -173,25 +192,48 @@ def formatting_prompts_func(examples):
 def create_compute_metrics(eval_dataset):
     """Create a compute_metrics function that has access to the dataset"""
     def compute_metrics(eval_pred):
-        # Clear CUDA cache before evaluation
+        # EXTREME memory cleanup before evaluation
+        gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.synchronize()
         
         # Ensure no gradients are computed during evaluation
         with torch.no_grad():
             if is_main_process:  # Only print debug on main process
                 print(f"\nDEBUG: compute_metrics called with eval_pred type: {type(eval_pred)}")
+                if torch.cuda.is_available():
+                    print(f"DEBUG: CUDA memory at start of compute_metrics: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+            
             predictions, labels = eval_pred
             
             if is_main_process:
                 print(f"DEBUG: predictions shape: {predictions.shape if hasattr(predictions, 'shape') else 'no shape'}")
                 print(f"DEBUG: predictions type: {type(predictions)}")
+                if torch.cuda.is_available():
+                    print(f"DEBUG: CUDA memory before detaching: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
             
             # Handle the case where predictions might be nested tuples/lists from SFTTrainer
             if isinstance(predictions, tuple):
                 predictions = predictions[0]
             
-            # Process predictions ONE AT A TIME to minimize memory usage
+            # CRUCIAL: Detach predictions from computational graph to free GPU memory
+            if hasattr(predictions, 'detach'):
+                predictions = predictions.detach()
+                if is_main_process:
+                    print(f"DEBUG: Detached predictions from computational graph")
+            
+            # Also detach labels if they have gradients
+            if hasattr(labels, 'detach'):
+                labels = labels.detach()
+                if is_main_process:
+                    print(f"DEBUG: Detached labels from computational graph")
+            
+            # Check memory after detaching
+            if is_main_process and torch.cuda.is_available():
+                print(f"DEBUG: CUDA memory after detaching: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+            
+            # Process only the first few predictions to minimize memory usage
             decoded_preds = []
             num_predictions = len(predictions) if hasattr(predictions, '__len__') else predictions.shape[0]
             
@@ -206,13 +248,18 @@ def create_compute_metrics(eval_dataset):
                     else:
                         single_pred = predictions[i:i+1]
                     
+                    # Ensure this single prediction is also detached
+                    if hasattr(single_pred, 'detach'):
+                        single_pred = single_pred.detach()
+                    
                     # Move this single prediction to CPU immediately
                     if hasattr(single_pred, 'cpu'):
                         single_pred_cpu = single_pred.cpu().numpy()
                     else:
                         single_pred_cpu = single_pred
                     
-                    # Clear CUDA cache after moving to CPU
+                    # Aggressive cleanup after each prediction
+                    gc.collect()
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
                     
@@ -233,19 +280,17 @@ def create_compute_metrics(eval_dataset):
                             print(f"DEBUG: Error decoding prediction {i}: {decode_e}")
                         decoded_preds.append("")
                     
-                    # Clear cache after each prediction
+                    # Aggressive cleanup after each step
+                    gc.collect()
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
-                        
-                    # Progress indicator for main process
-                    if is_main_process and (i + 1) % 10 == 0:
-                        print(f"DEBUG: Processed {i + 1}/{num_predictions} predictions")
                 
                 except Exception as e:
                     if is_main_process:
                         print(f"DEBUG: Error processing prediction {i}: {e}")
                     decoded_preds.append("")
-                    # Clear cache even on error
+                    # Aggressive cleanup even on error
+                    gc.collect()
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
             
@@ -255,8 +300,8 @@ def create_compute_metrics(eval_dataset):
                 if len(decoded_preds) > 0:
                     print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
             
-            # Limit evaluation to a subset to save memory (max 30 samples for one-by-one processing)
-            max_eval_samples = min(30, len(decoded_preds), len(eval_dataset))
+            # Evaluate ALL decoded predictions (very few)
+            max_eval_samples = len(decoded_preds)
             
             # Initialize counters
             correct_solutions = 0
@@ -284,7 +329,7 @@ def create_compute_metrics(eval_dataset):
                 }
             
             if is_main_process:
-                print(f"DEBUG: Evaluating {total_paths} samples (processing one by one for memory efficiency)")
+                print(f"DEBUG: Evaluating {total_paths} samples (extreme memory conservation mode)")
             
             # Process each evaluation sample individually
             for i in range(total_paths):
@@ -323,10 +368,6 @@ def create_compute_metrics(eval_dataset):
                     if is_main_process:
                         print(f"Error in metrics computation for sample {i}: {e}")
                     continue
-                
-                # Clear cache after each evaluation sample
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
             
             # Calculate metrics as percentages
             metrics = {
@@ -350,9 +391,11 @@ def create_compute_metrics(eval_dataset):
                 wandb.log(metrics)
                 print(f"DEBUG: Metrics logged to wandb")
             
-            # Final cache clear
+            # Final aggressive cleanup
+            gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                torch.cuda.synchronize()
             
             return metrics
     
