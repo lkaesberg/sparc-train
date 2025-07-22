@@ -80,7 +80,7 @@ training_args = SFTConfig(
     learning_rate=5e-5,
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,  # Keep eval batch size small
-    eval_accumulation_steps=10,  # Process eval in smaller steps
+    eval_accumulation_steps=1,  # Process eval in smaller steps
     gradient_accumulation_steps=16,
     max_seq_length=2048,  # Reduce sequence length to save memory
     remove_unused_columns=False,
@@ -191,56 +191,72 @@ def create_compute_metrics(eval_dataset):
             if isinstance(predictions, tuple):
                 predictions = predictions[0]
             
-            # Convert to numpy if it's a tensor and move to CPU immediately
-            if hasattr(predictions, 'cpu'):
-                predictions = predictions.cpu().numpy()
-            
-            # Clear CUDA cache after moving to CPU
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            
-            # Decode predictions - SFTTrainer passes logits, so we need to get the argmax
-            if len(predictions.shape) > 2:
-                # If predictions are logits [batch_size, seq_len, vocab_size]
-                predicted_ids = predictions.argmax(axis=-1)
-            else:
-                # If predictions are already token IDs
-                predicted_ids = predictions
-            
-            # Process predictions in smaller chunks to avoid memory issues
-            chunk_size = 4  # Process 4 predictions at a time
+            # Process predictions ONE AT A TIME to minimize memory usage
             decoded_preds = []
+            num_predictions = len(predictions) if hasattr(predictions, '__len__') else predictions.shape[0]
             
-            for i in range(0, len(predicted_ids), chunk_size):
-                chunk = predicted_ids[i:i+chunk_size]
+            if is_main_process:
+                print(f"DEBUG: Processing {num_predictions} predictions one by one")
+            
+            for i in range(num_predictions):
                 try:
-                    chunk_decoded = tokenizer.batch_decode(chunk, skip_special_tokens=True)
-                    decoded_preds.extend(chunk_decoded)
+                    # Get single prediction
+                    if hasattr(predictions, '__getitem__'):
+                        single_pred = predictions[i]
+                    else:
+                        single_pred = predictions[i:i+1]
+                    
+                    # Move this single prediction to CPU immediately
+                    if hasattr(single_pred, 'cpu'):
+                        single_pred_cpu = single_pred.cpu().numpy()
+                    else:
+                        single_pred_cpu = single_pred
+                    
+                    # Clear CUDA cache after moving to CPU
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    
+                    # Decode this single prediction
+                    if len(single_pred_cpu.shape) > 1:
+                        # If prediction is logits [seq_len, vocab_size]
+                        predicted_ids = single_pred_cpu.argmax(axis=-1)
+                    else:
+                        # If prediction is already token IDs
+                        predicted_ids = single_pred_cpu
+                    
+                    # Decode this single sequence
+                    try:
+                        decoded = tokenizer.decode(predicted_ids, skip_special_tokens=True)
+                        decoded_preds.append(decoded)
+                    except Exception as decode_e:
+                        if is_main_process:
+                            print(f"DEBUG: Error decoding prediction {i}: {decode_e}")
+                        decoded_preds.append("")
+                    
+                    # Clear cache after each prediction
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        
+                    # Progress indicator for main process
+                    if is_main_process and (i + 1) % 10 == 0:
+                        print(f"DEBUG: Processed {i + 1}/{num_predictions} predictions")
+                
                 except Exception as e:
                     if is_main_process:
-                        print(f"DEBUG: Error decoding chunk {i//chunk_size}: {e}")
-                    # Fallback: try to process each sequence individually
-                    for seq in chunk:
-                        try:
-                            decoded = tokenizer.decode(seq, skip_special_tokens=True)
-                            decoded_preds.append(decoded)
-                        except Exception as seq_e:
-                            if is_main_process:
-                                print(f"DEBUG: Error decoding sequence: {seq_e}")
-                            decoded_preds.append("")
-                
-                # Clear cache between chunks
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
+                        print(f"DEBUG: Error processing prediction {i}: {e}")
+                    decoded_preds.append("")
+                    # Clear cache even on error
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
             
             # Debug: Print some examples to see what we're getting (only main process)
             if is_main_process:
-                print(f"\nDEBUG: Number of predictions: {len(decoded_preds)}")
+                print(f"\nDEBUG: Number of predictions decoded: {len(decoded_preds)}")
                 if len(decoded_preds) > 0:
                     print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
             
-            # Limit evaluation to a subset to save memory (max 50 samples)
-            max_eval_samples = min(50, len(decoded_preds), len(eval_dataset))
+            # Limit evaluation to a subset to save memory (max 30 samples for one-by-one processing)
+            max_eval_samples = min(30, len(decoded_preds), len(eval_dataset))
             
             # Initialize counters
             correct_solutions = 0
@@ -268,8 +284,9 @@ def create_compute_metrics(eval_dataset):
                 }
             
             if is_main_process:
-                print(f"DEBUG: Evaluating {total_paths} samples (limited for memory)")
+                print(f"DEBUG: Evaluating {total_paths} samples (processing one by one for memory efficiency)")
             
+            # Process each evaluation sample individually
             for i in range(total_paths):
                 pred = decoded_preds[i]
                 # Get the original dataset entry (puzzle)
@@ -300,12 +317,16 @@ def create_compute_metrics(eval_dataset):
                             no_rule_crossing += 1
                         if analysis.get("fully_valid_path", False):
                             valid_paths += 1
-                            
+                
                 except Exception as e:
                     # Handle cases where path extraction fails
                     if is_main_process:
                         print(f"Error in metrics computation for sample {i}: {e}")
                     continue
+                
+                # Clear cache after each evaluation sample
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
             
             # Calculate metrics as percentages
             metrics = {
