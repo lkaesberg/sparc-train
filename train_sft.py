@@ -100,6 +100,7 @@ training_args = SFTConfig(
     logging_first_step=True,  # Log the first step
     dataloader_pin_memory=False,  # Disable pin memory to avoid potential issues
     fp16_full_eval=False,  # Don't use fp16 during eval to avoid precision issues
+    eval_accumulation_steps = 10
 )
 
 # Multi-GPU device setup
