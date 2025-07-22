@@ -123,9 +123,6 @@ training_args = SFTConfig(
     # CRITICAL: Enable padding-free batching for massive memory savings
     padding_free=True,  # Eliminates padding completely, huge memory reduction
     
-    # Use flash attention for better memory efficiency
-    model_init_kwargs={"attn_implementation": "flash_attention_2"},
-    
     # Additional memory optimizations
     eval_on_start=False,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
@@ -135,7 +132,8 @@ training_args = SFTConfig(
 # Multi-GPU device setup
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    device_map={'': device_string}  # Proper device placement for multi-GPU
+    device_map={'': device_string},  # Proper device placement for multi-GPU
+    attn_implementation="flash_attention_2"
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
