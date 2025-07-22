@@ -1,10 +1,12 @@
 from datasets import load_dataset
 from trl import SFTConfig, SFTTrainer
 from sparc.prompt import generate_prompt
+from sparc.validation import extract_solution_path, validate_solution, analyze_path
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl.trainer.sft_trainer import clone_chat_template
-import json
+import re
+import numpy as np
 
 model_name = "Qwen/Qwen3-0.6B"
 
@@ -22,6 +24,7 @@ wandb.init(
 
 
 dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
+eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test")
 
 training_args = SFTConfig(
     output_dir="./tmp",
@@ -101,12 +104,85 @@ def formatting_prompts_func(examples):
             
             return output_text
 
+def create_compute_metrics(eval_dataset):
+    """Create a compute_metrics function that has access to the dataset"""
+    def compute_metrics(eval_pred):
+        predictions, labels = eval_pred
+        
+        # Decode predictions only (we'll get ground truth from dataset)
+        decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+        
+        # Initialize counters
+        correct_solutions = 0
+        valid_paths = 0
+        starts_correctly = 0
+        ends_correctly = 0
+        connected_paths = 0
+        non_intersecting = 0
+        no_rule_crossing = 0
+        total_paths = len(decoded_preds)
+        
+        for i, pred in enumerate(decoded_preds):
+            # Get the original dataset entry (puzzle)
+            puzzle = eval_dataset[i]
+            
+            try:
+                # Extract the path from model response using SPaRC validation
+                extracted_path = extract_solution_path(pred, puzzle)
+                
+                if extracted_path is not None:
+                    # Validate against ground truth
+                    is_correct = validate_solution(extracted_path, puzzle)
+                    if is_correct:
+                        correct_solutions += 1
+                    
+                    # Get detailed analysis
+                    analysis = analyze_path(extracted_path, puzzle)
+                    
+                    # Count individual validation criteria
+                    if analysis.get("starts_at_start_ends_at_exit", False):
+                        starts_correctly += 1
+                        ends_correctly += 1
+                    if analysis.get("connected_line", False):
+                        connected_paths += 1
+                    if analysis.get("non_intersecting_line", False):
+                        non_intersecting += 1
+                    if analysis.get("no_rule_crossing", False):
+                        no_rule_crossing += 1
+                    if analysis.get("fully_valid_path", False):
+                        valid_paths += 1
+                        
+            except Exception as e:
+                # Handle cases where path extraction fails
+                print(f"Error: {e}")
+                continue
+        
+        # Calculate metrics as percentages
+        return {
+            "solution_accuracy": correct_solutions / total_paths if total_paths > 0 else 0,
+            "valid_path_rate": valid_paths / total_paths if total_paths > 0 else 0,
+            "start_end_accuracy": starts_correctly / total_paths if total_paths > 0 else 0,
+            "connection_rate": connected_paths / total_paths if total_paths > 0 else 0,
+            "non_intersection_rate": non_intersecting / total_paths if total_paths > 0 else 0,
+            "rule_compliance_rate": no_rule_crossing / total_paths if total_paths > 0 else 0,
+            "correct_solutions": correct_solutions,
+            "valid_paths": valid_paths,
+            "total_evaluated": total_paths
+        }
+    
+    return compute_metrics
+
+# Create the compute_metrics function with access to eval dataset
+compute_metrics_fn = create_compute_metrics(eval_dataset)
+
 trainer = SFTTrainer(
-    model=model_name,
+    model=model,
+    processing_class=tokenizer,
     args=training_args,
     train_dataset=dataset,
+    eval_dataset=eval_dataset,
     formatting_func=formatting_prompts_func,
-    processing_class=tokenizer
+    compute_metrics=compute_metrics_fn,
 )
 
 trainer.train()
