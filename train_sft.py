@@ -129,6 +129,7 @@ training_args = SFTConfig(
     # Additional memory optimizations
     eval_on_start=False,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
+    eval_do_concat_batches=False
 )
 
 # Multi-GPU device setup
