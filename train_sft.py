@@ -150,7 +150,7 @@ training_args = SFTConfig(
     padding_free=True,  # Eliminates padding completely, huge memory reduction
     
     # Additional memory optimizations
-    eval_on_start=False,  # Don't evaluate at start
+    eval_on_start=True,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
     eval_do_concat_batches=False,
     packing=False,
