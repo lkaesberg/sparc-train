@@ -349,7 +349,14 @@ def create_compute_metrics(eval_dataset):
                 torch.cuda.empty_cache()
             
             # Ensure we have a proper 2D array: [num_samples, seq_len]
-            if len(predicted_ids.shape) == 1:
+            if len(predicted_ids.shape) == 3:
+                # Multi-GPU gather created extra dimension: [num_samples, num_gpus, seq_len]
+                # Reshape to [num_samples * num_gpus, seq_len]
+                original_shape = predicted_ids.shape
+                predicted_ids = predicted_ids.reshape(-1, predicted_ids.shape[-1])
+                if is_main_process:
+                    print(f"DEBUG: Reshaped from {original_shape} to {predicted_ids.shape}")
+            elif len(predicted_ids.shape) == 1:
                 # If flattened, try to reshape based on expected sequence length
                 seq_len = 8192  # Based on debug output
                 if len(predicted_ids) % seq_len == 0:
@@ -464,18 +471,41 @@ def create_compute_metrics(eval_dataset):
                 # Get the original dataset entry (puzzle)
                 puzzle = eval_dataset[i]
                 
+                if is_main_process:
+                    print(f"\n--- DEBUG: Sample {i+1}/{total_paths} ---")
+                    print(f"Model prediction (first 200 chars): {pred}")
+                    
+                    # Show ground truth solution for comparison
+                    if 'solutions' in puzzle and len(puzzle['solutions']) > 0:
+                        gt_path = puzzle['solutions'][0].get('path', [])
+                        print(f"Ground truth path: {gt_path}")
+                    else:
+                        print(f"No ground truth path found")
+                
                 try:
                     # Extract the path from model response using SPaRC validation
                     extracted_path = extract_solution_path(pred, puzzle)
                     
+                    if is_main_process:
+                        print(f"Extracted path: {extracted_path}")
+                    
                     if extracted_path is not None:
                         # Validate against ground truth
                         is_correct = validate_solution(extracted_path, puzzle)
+                        
+                        if is_main_process:
+                            print(f"Solution correct: {is_correct}")
+                        
                         if is_correct:
                             correct_solutions += 1
                         
                         # Get detailed analysis
                         analysis = analyze_path(extracted_path, puzzle)
+                        
+                        if is_main_process:
+                            print(f"Path analysis:")
+                            for criterion, result in analysis.items():
+                                print(f"  - {criterion}: {result}")
                         
                         # Count individual validation criteria
                         if analysis.get("starts_at_start_ends_at_exit", False):
@@ -489,11 +519,15 @@ def create_compute_metrics(eval_dataset):
                             no_rule_crossing += 1
                         if analysis.get("fully_valid_path", False):
                             valid_paths += 1
+                    else:
+                        if is_main_process:
+                            print(f"No path extracted from model prediction")
                 
                 except Exception as e:
                     # Handle cases where path extraction fails
                     if is_main_process:
                         print(f"Error in metrics computation for sample {i}: {e}")
+                        print(f"Model prediction that caused error: {pred}")
                     continue
             
             # Calculate metrics as percentages
@@ -512,11 +546,7 @@ def create_compute_metrics(eval_dataset):
             # Debug: Print metrics (only main process)
             if is_main_process:
                 print(f"DEBUG: Computed metrics: {metrics}")
-            
-            # Only log to wandb from main process
-            if wandb.run and is_main_process:
-                wandb.log(metrics)
-                print(f"DEBUG: Metrics logged to wandb")
+        
             
             # Final aggressive cleanup
             gc.collect()
