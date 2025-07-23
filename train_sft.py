@@ -67,8 +67,63 @@ else:
 dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
 eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test")
 
-# Limit evaluation dataset size to prevent memory issues
-max_eval_size = 500  # Increase limit for more comprehensive evaluation
+def expand_dataset_with_individual_solutions(dataset):
+    """
+    Expand dataset so each puzzle appears once per solution.
+    Instead of: 1 puzzle with 3 solutions
+    Creates: 3 samples, each with the same puzzle but 1 unique solution
+    
+    BENEFITS FOR TRAINING:
+    - Model sees each valid solution path as a separate training example
+    - Learns multiple valid approaches to the same puzzle
+    - Better pattern recognition for different solution strategies
+    - Increased training data diversity without collecting new puzzles
+    - More focused learning: each sample has exactly one target solution
+    """
+    expanded_samples = []
+    original_count = len(dataset)
+    total_solutions = 0
+    
+    for sample in dataset:
+        puzzle_data = sample.copy()
+        solutions = puzzle_data.get('solutions', [])
+        
+        if len(solutions) == 0:
+            # Keep samples with no solutions as-is
+            expanded_samples.append(puzzle_data)
+            continue
+        
+        total_solutions += len(solutions)
+        
+        # Create one sample per solution
+        for solution in solutions:
+            new_sample = puzzle_data.copy()
+            # Replace the solutions array with just this one solution
+            new_sample['solutions'] = [solution]
+            expanded_samples.append(new_sample)
+    
+    # Convert back to HuggingFace dataset format
+    from datasets import Dataset
+    
+    if is_main_process:
+        print(f"DEBUG: Dataset expansion - {original_count} puzzles with {total_solutions} total solutions")
+        print(f"DEBUG: Average solutions per puzzle: {total_solutions/original_count:.2f}")
+    
+    return Dataset.from_list(expanded_samples)
+
+# Expand both training and evaluation datasets
+if is_main_process:
+    print(f"DEBUG: Original train dataset size: {len(dataset)}")
+    print(f"DEBUG: Original eval dataset size: {len(eval_dataset)}")
+
+dataset = expand_dataset_with_individual_solutions(dataset)
+
+if is_main_process:
+    print(f"DEBUG: Expanded train dataset size: {len(dataset)}")
+
+
+# Limit evaluation dataset size to prevent memory issues (after expansion)
+max_eval_size = 500  # Increase limit since we now have more diverse samples
 # Set max_eval_size = None to process the ENTIRE eval dataset (no limit)
 if max_eval_size is not None and len(eval_dataset) > max_eval_size:
     if is_main_process:  # Only print on main process
