@@ -163,7 +163,7 @@ training_args = SFTConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map={'': device_string},  # Proper device placement for multi-GPU
-    #attn_implementation="flash_attention_2"
+    attn_implementation="flash_attention_2"
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
