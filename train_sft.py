@@ -198,6 +198,71 @@ def formatting_prompts_func(examples):
             
             return output_text
 
+# ==============================================================================
+# MEMORY OPTIMIZATION: preprocess_logits_for_metrics
+# ==============================================================================
+# The preprocess_logits_for_metrics function is CRITICAL for memory efficiency:
+#
+# WITHOUT this function:
+# - Full logits tensor: [batch_size, seq_len, vocab_size] 
+# - Example: [4, 2048, 32000] = ~1GB per batch in GPU memory
+# - Causes OOM during evaluation
+#
+# WITH this function:
+# - Converts to token IDs: [batch_size, seq_len]
+# - Example: [4, 2048] = ~32KB per batch 
+# - Reduces memory by factor of vocab_size (~32,000x smaller!)
+# - Moves to CPU immediately, freeing GPU memory
+#
+# This function runs BEFORE compute_metrics, dramatically reducing the
+# memory footprint during evaluation and preventing OOM errors.
+# ==============================================================================
+
+def preprocess_logits_for_metrics(logits, labels):
+    """
+    Preprocess logits to reduce memory usage during evaluation.
+    This function converts logits to token IDs immediately, reducing memory footprint.
+    """
+    # CRITICAL: This runs during evaluation and can cause OOM if not optimized
+    
+    if is_main_process:
+        print(f"DEBUG: preprocess_logits_for_metrics called")
+        print(f"DEBUG: Input logits shape: {logits.shape}")
+        print(f"DEBUG: Input logits device: {logits.device}")
+        if torch.cuda.is_available():
+            print(f"DEBUG: CUDA memory before preprocessing: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    
+    # Ensure no gradients are computed
+    with torch.no_grad():
+        # Detach from computational graph immediately
+        if hasattr(logits, 'detach'):
+            logits = logits.detach()
+        
+        # Convert logits to predicted token IDs (argmax along vocab dimension)
+        # This dramatically reduces size: [batch, seq_len, vocab_size] -> [batch, seq_len]
+        predicted_ids = logits.argmax(dim=-1)
+        
+        # Move to CPU immediately to free GPU memory
+        if hasattr(predicted_ids, 'cpu'):
+            predicted_ids = predicted_ids.cpu()
+        
+        # Clear the original logits from GPU memory
+        del logits
+        
+        # Aggressive memory cleanup
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        
+        if is_main_process:
+            print(f"DEBUG: Output predicted_ids shape: {predicted_ids.shape}")
+            print(f"DEBUG: Reduced tensor size by factor of ~{model.config.vocab_size}")
+            if torch.cuda.is_available():
+                print(f"DEBUG: CUDA memory after preprocessing: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    
+    return predicted_ids
+
 def create_compute_metrics(eval_dataset):
     """Create a compute_metrics function that has access to the dataset"""
     def compute_metrics(eval_pred):
@@ -214,94 +279,53 @@ def create_compute_metrics(eval_dataset):
                 if torch.cuda.is_available():
                     print(f"DEBUG: CUDA memory at start of compute_metrics: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
             
-            predictions, labels = eval_pred
+            # Now predictions are already processed token IDs (not logits!)
+            predicted_ids, labels = eval_pred
             
             if is_main_process:
-                print(f"DEBUG: predictions shape: {predictions.shape if hasattr(predictions, 'shape') else 'no shape'}")
-                print(f"DEBUG: predictions type: {type(predictions)}")
-                if torch.cuda.is_available():
-                    print(f"DEBUG: CUDA memory before detaching: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+                print(f"DEBUG: predicted_ids shape: {predicted_ids.shape if hasattr(predicted_ids, 'shape') else 'no shape'}")
+                print(f"DEBUG: predicted_ids type: {type(predicted_ids)}")
             
-            # Handle the case where predictions might be nested tuples/lists from SFTTrainer
-            if isinstance(predictions, tuple):
-                predictions = predictions[0]
+            # Convert to numpy if it's a tensor
+            if hasattr(predicted_ids, 'cpu'):
+                predicted_ids = predicted_ids.cpu().numpy()
+            elif hasattr(predicted_ids, 'numpy'):
+                predicted_ids = predicted_ids.numpy()
             
-            # CRUCIAL: Detach predictions from computational graph to free GPU memory
-            if hasattr(predictions, 'detach'):
-                predictions = predictions.detach()
-                if is_main_process:
-                    print(f"DEBUG: Detached predictions from computational graph")
-            
-            # Also detach labels if they have gradients
-            if hasattr(labels, 'detach'):
-                labels = labels.detach()
-                if is_main_process:
-                    print(f"DEBUG: Detached labels from computational graph")
-            
-            # Check memory after detaching
-            if is_main_process and torch.cuda.is_available():
-                print(f"DEBUG: CUDA memory after detaching: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-            
-
+            # Process only MINIMAL predictions to avoid OOM
             decoded_preds = []
-            num_predictions = len(predictions) if hasattr(predictions, '__len__') else predictions.shape[0]
+            num_predictions = min(10, len(predicted_ids) if hasattr(predicted_ids, '__len__') else predicted_ids.shape[0])
             
             if is_main_process:
-                print(f"DEBUG: Processing only {num_predictions} predictions")
+                print(f"DEBUG: Processing {num_predictions} predictions (memory optimized)")
             
             for i in range(num_predictions):
                 try:
-                    # Get single prediction
-                    if hasattr(predictions, '__getitem__'):
-                        single_pred = predictions[i]
+                    # Get single prediction (already token IDs)
+                    if hasattr(predicted_ids, '__getitem__'):
+                        single_pred_ids = predicted_ids[i]
                     else:
-                        single_pred = predictions[i:i+1]
-                    
-                    # Ensure this single prediction is also detached
-                    if hasattr(single_pred, 'detach'):
-                        single_pred = single_pred.detach()
-                    
-                    # Move this single prediction to CPU immediately
-                    if hasattr(single_pred, 'cpu'):
-                        single_pred_cpu = single_pred.cpu().numpy()
-                    else:
-                        single_pred_cpu = single_pred
-                    
-                    # Aggressive cleanup after each prediction
-                    gc.collect()
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                    
-                    # Decode this single prediction
-                    if len(single_pred_cpu.shape) > 1:
-                        # If prediction is logits [seq_len, vocab_size]
-                        predicted_ids = single_pred_cpu.argmax(axis=-1)
-                    else:
-                        # If prediction is already token IDs
-                        predicted_ids = single_pred_cpu
+                        single_pred_ids = predicted_ids[i:i+1]
                     
                     # Decode this single sequence
                     try:
-                        decoded = tokenizer.decode(predicted_ids, skip_special_tokens=True)
+                        decoded = tokenizer.decode(single_pred_ids, skip_special_tokens=True)
                         decoded_preds.append(decoded)
                     except Exception as decode_e:
                         if is_main_process:
                             print(f"DEBUG: Error decoding prediction {i}: {decode_e}")
                         decoded_preds.append("")
                     
-                    # Aggressive cleanup after each step
-                    gc.collect()
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
+                    # Light cleanup after each prediction
+                    if i % 5 == 0:  # Every 5 predictions
+                        gc.collect()
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
                 
                 except Exception as e:
                     if is_main_process:
                         print(f"DEBUG: Error processing prediction {i}: {e}")
                     decoded_preds.append("")
-                    # Aggressive cleanup even on error
-                    gc.collect()
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
             
             # Debug: Print some examples to see what we're getting (only main process)
             if is_main_process:
@@ -309,8 +333,8 @@ def create_compute_metrics(eval_dataset):
                 if len(decoded_preds) > 0:
                     print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
             
-            # Evaluate ALL decoded predictions (very few)
-            max_eval_samples = len(decoded_preds)
+            # Evaluate ALL decoded predictions (limited number)
+            max_eval_samples = min(len(decoded_preds), len(eval_dataset))
             
             # Initialize counters
             correct_solutions = 0
@@ -338,7 +362,7 @@ def create_compute_metrics(eval_dataset):
                 }
             
             if is_main_process:
-                print(f"DEBUG: Evaluating {total_paths} samples")
+                print(f"DEBUG: Evaluating {total_paths} samples (memory optimized)")
             
             # Process each evaluation sample individually
             for i in range(total_paths):
@@ -427,6 +451,7 @@ trainer = SFTTrainer(
     eval_dataset=eval_dataset,
     formatting_func=formatting_prompts_func,
     compute_metrics=compute_metrics_fn,
+    preprocess_logits_for_metrics=preprocess_logits_for_metrics,  # CRITICAL: Reduces memory usage
     callbacks=[DebugEvaluationCallback()],
 )
 
