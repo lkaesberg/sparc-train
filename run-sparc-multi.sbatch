@@ -14,5 +14,5 @@ module load cuda/12.6.2
 source activate sparc
 nvidia-smi
 accelerate launch \
-    --config_file accelerate.config \
+    --config_file fsdp.config \
     train_sft.py
