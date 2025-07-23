@@ -303,75 +303,61 @@ def create_compute_metrics(eval_dataset):
                 if is_main_process:
                     print(f"DEBUG: Converting list format, length: {len(predicted_ids)}")
                 
-                # Convert nested lists to numpy array
-                import numpy as np
-                try:
-                    predicted_ids = np.array(predicted_ids)
-                    if is_main_process:
-                        print(f"DEBUG: Converted to numpy array with shape: {predicted_ids.shape}")
-                except Exception as e:
-                    if is_main_process:
-                        print(f"DEBUG: Error converting list to array: {e}")
-                        print(f"DEBUG: First few elements: {predicted_ids[:2] if len(predicted_ids) > 0 else 'empty'}")
-                    # Fallback: try to flatten and reshape
-                    try:
-                        # Flatten all nested structures
-                        flat_ids = []
-                        for item in predicted_ids:
-                            if isinstance(item, (list, tuple)):
-                                flat_ids.extend(item)
+                # Handle variable-length sequences - don't convert to single array
+                # Instead, process each sequence individually
+                flat_sequences = []
+                for item in predicted_ids:
+                    if isinstance(item, np.ndarray):
+                        # Each item is a numpy array of shape (num_gpus, seq_len)
+                        # Extract each GPU's sequences
+                        for gpu_sequences in item:
+                            flat_sequences.append(gpu_sequences)
+                    elif isinstance(item, (list, tuple)):
+                        # Handle nested lists/tuples
+                        for subitem in item:
+                            if hasattr(subitem, 'flatten'):
+                                flat_sequences.append(subitem.flatten())
                             else:
-                                flat_ids.append(item)
-                        predicted_ids = np.array(flat_ids)
-                        if is_main_process:
-                            print(f"DEBUG: Flattened to shape: {predicted_ids.shape}")
-                    except Exception as e2:
-                        if is_main_process:
-                            print(f"DEBUG: Failed to process predictions: {e2}")
-                        # Return empty metrics if we can't process
-                        return {
-                            "eval_solution_accuracy": 0.0,
-                            "eval_valid_path_rate": 0.0,
-                            "eval_start_end_accuracy": 0.0,
-                            "eval_connection_rate": 0.0,
-                            "eval_non_intersection_rate": 0.0,
-                            "eval_rule_compliance_rate": 0.0,
-                            "eval_correct_solutions": 0,
-                            "eval_valid_paths": 0,
-                            "eval_total_evaluated": 0
-                        }
+                                flat_sequences.append(subitem)
+                    else:
+                        flat_sequences.append(item)
+                
+                # Now flat_sequences contains individual sequence arrays
+                predicted_ids = flat_sequences
+                if is_main_process:
+                    print(f"DEBUG: Flattened to {len(flat_sequences)} individual sequences")
+                    print(f"DEBUG: Sequence lengths: {[len(seq) if hasattr(seq, '__len__') else 'unknown' for seq in flat_sequences[:5]]}...")
+                
             else:
                 # Handle tensor format
                 if hasattr(predicted_ids, 'cpu'):
                     predicted_ids = predicted_ids.cpu().numpy()
                 elif hasattr(predicted_ids, 'numpy'):
                     predicted_ids = predicted_ids.numpy()
+                
+                # Convert tensor to list of sequences
+                if len(predicted_ids.shape) == 3:
+                    # Multi-GPU gather created extra dimension: [num_samples, num_gpus, seq_len]
+                    # Flatten to list of individual sequences
+                    flat_sequences = []
+                    for sample in predicted_ids:
+                        for gpu_seq in sample:
+                            flat_sequences.append(gpu_seq)
+                    predicted_ids = flat_sequences
+                    if is_main_process:
+                        print(f"DEBUG: Converted 3D tensor to {len(flat_sequences)} individual sequences")
+                elif len(predicted_ids.shape) == 2:
+                    # Convert 2D array to list of sequences
+                    predicted_ids = [predicted_ids[i] for i in range(predicted_ids.shape[0])]
             
-            # Additional memory cleanup after moving to CPU
+            # Additional memory cleanup after processing
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            # Ensure we have a proper 2D array: [num_samples, seq_len]
-            if len(predicted_ids.shape) == 3:
-                # Multi-GPU gather created extra dimension: [num_samples, num_gpus, seq_len]
-                # Reshape to [num_samples * num_gpus, seq_len]
-                original_shape = predicted_ids.shape
-                predicted_ids = predicted_ids.reshape(-1, predicted_ids.shape[-1])
-                if is_main_process:
-                    print(f"DEBUG: Reshaped from {original_shape} to {predicted_ids.shape}")
-            elif len(predicted_ids.shape) == 1:
-                # If flattened, try to reshape based on expected sequence length
-                seq_len = 8192  # Based on debug output
-                if len(predicted_ids) % seq_len == 0:
-                    num_samples = len(predicted_ids) // seq_len
-                    predicted_ids = predicted_ids.reshape(num_samples, seq_len)
-                    if is_main_process:
-                        print(f"DEBUG: Reshaped to: {predicted_ids.shape}")
-            
             # Process ALL predictions instead of limiting to avoid incomplete evaluation
             decoded_preds = []
-            num_predictions = len(predicted_ids) if hasattr(predicted_ids, '__len__') else predicted_ids.shape[0]
+            num_predictions = len(predicted_ids)
             
             if is_main_process:
                 print(f"DEBUG: Processing ALL {num_predictions} predictions for comprehensive evaluation")
@@ -379,16 +365,8 @@ def create_compute_metrics(eval_dataset):
             for i in range(num_predictions):
                 try:
                     # Get single prediction (already token IDs)
-                    if len(predicted_ids.shape) == 2:
-                        # 2D array: [num_samples, seq_len]
-                        single_pred_ids = predicted_ids[i]
-                    elif len(predicted_ids.shape) == 1:
-                        # 1D array: assume single sequence
-                        single_pred_ids = predicted_ids
-                    else:
-                        if is_main_process:
-                            print(f"DEBUG: Unexpected predicted_ids shape: {predicted_ids.shape}")
-                        single_pred_ids = predicted_ids[i] if hasattr(predicted_ids, '__getitem__') else predicted_ids
+                    # predicted_ids is now a list of individual sequences
+                    single_pred_ids = predicted_ids[i]
                     
                     # Ensure it's a 1D array of integers
                     if hasattr(single_pred_ids, 'flatten'):
@@ -422,7 +400,7 @@ def create_compute_metrics(eval_dataset):
                         decoded_preds.append("")
                     
                     # Light cleanup after each prediction
-                    if i % 5 == 0:  # Every 5 predictions
+                    if i % 10 == 0:  # Every 10 predictions
                         gc.collect()
                         if torch.cuda.is_available():
                             torch.cuda.empty_cache()
