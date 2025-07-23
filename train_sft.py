@@ -156,8 +156,7 @@ training_args = SFTConfig(
     packing=False,
     eval_packing=False,
     # Additional settings to prevent sequence combination
-    dataloader_drop_last=False,  # Don't drop incomplete batches
-    remove_unused_columns=False,  # Keep all columns for proper matching
+    dataloader_drop_last=True,  # Don't drop incomplete batches
 )
 
 # Multi-GPU device setup
