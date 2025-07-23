@@ -90,6 +90,28 @@ if torch.cuda.is_available() and is_main_process:
     torch.cuda.synchronize()
     print(f"DEBUG: After cleanup - CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
 
+# ==============================================================================
+# CRITICAL: PREVENTING SEQUENCE PACKING DURING EVALUATION
+# ==============================================================================
+# ISSUE: Even with packing=False, SFT evaluation can still pack multiple samples
+# into single sequences, causing incorrect puzzle-to-path matching.
+#
+# SYMPTOMS:
+# - Getting 32 predictions instead of 500 eval samples
+# - Long sequences (11556+ tokens) containing multiple puzzles
+# - Decoded text with multiple <|im_start|>system messages
+# - Incorrect validation because pred[i] doesn't match eval_dataset[i]
+#
+# SOLUTION SETTINGS:
+# - per_device_eval_batch_size=1: Force individual sample processing
+# - group_by_length=False: Prevent length-based batching
+# - packing=False, eval_packing=False: Explicit packing disable
+# - eval_do_concat_batches=False: Prevent batch concatenation
+# - remove_unused_columns=False: Keep dataset structure intact
+#
+# FALLBACK: If packing still occurs, detect and split packed sequences
+# ==============================================================================
+
 training_args = SFTConfig(
     output_dir="./tmp",
     report_to="wandb",
@@ -100,12 +122,12 @@ training_args = SFTConfig(
     max_steps=1000,
     learning_rate=5e-5,
     per_device_train_batch_size=4,
-    per_device_eval_batch_size=4,  # Keep eval batch size at absolute minimum
+    per_device_eval_batch_size=1,  # CRITICAL: Set to 1 to prevent sequence packing
     eval_accumulation_steps=1,  # Process eval in smallest possible steps
     gradient_accumulation_steps=2,
     max_seq_length=4096,  # Reduce sequence length to save memory
     remove_unused_columns=False,
-    group_by_length=False,
+    group_by_length=False,  # IMPORTANT: Disable to prevent length-based batching
     optim="adamw_torch_fused",  # Better performance than adamw_torch
     gradient_checkpointing=True,  # Reduce memory usage
     bf16=True,  # Use bfloat16 for better performance if supported
@@ -132,7 +154,10 @@ training_args = SFTConfig(
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
     eval_do_concat_batches=False,
     packing=False,
-    eval_packing=False
+    eval_packing=False,
+    # Additional settings to prevent sequence combination
+    dataloader_drop_last=False,  # Don't drop incomplete batches
+    remove_unused_columns=False,  # Keep all columns for proper matching
 )
 
 # Multi-GPU device setup
@@ -415,10 +440,51 @@ def create_compute_metrics(eval_dataset):
             # Debug: Print some examples to see what we're getting (only main process)
             if is_main_process:
                 print(f"\nDEBUG: Number of predictions decoded: {len(decoded_preds)}")
+                print(f"DEBUG: Eval dataset size: {len(eval_dataset)}")
                 if len(decoded_preds) > 0:
-                    print(f"DEBUG: First prediction: {decoded_preds[0][:200]}...")
+                    print(f"DEBUG: First prediction length: {len(decoded_preds[0])} chars")
+                    print(f"DEBUG: First prediction: {decoded_preds[0][:400]}...")
+                    
+                    # Check if sequences are packed (contain multiple samples)
+                    # Look for multiple system/user message pairs which indicate packing
+                    sample_markers = decoded_preds[0].count("<|im_start|>system")
+                    if sample_markers > 1:
+                        print(f"WARNING: Detected {sample_markers} system messages in first prediction!")
+                        print(f"WARNING: Sequences appear to be PACKED despite packing=False!")
+                        print(f"WARNING: This will cause incorrect puzzle-to-path matching!")
             
-            # Evaluate ALL decoded predictions (limited number)
+            # Handle the packing issue: split packed sequences if detected
+            if len(decoded_preds) < len(eval_dataset):
+                if is_main_process:
+                    print(f"WARNING: Mismatch - {len(decoded_preds)} predictions vs {len(eval_dataset)} eval samples")
+                    print(f"WARNING: Attempting to split packed sequences...")
+                
+                # Try to split packed sequences
+                split_predictions = []
+                for pred in decoded_preds:
+                    # Split on system message markers
+                    if "<|im_start|>system" in pred:
+                        parts = pred.split("<|im_start|>system")
+                        # First part might be empty, skip it
+                        for i, part in enumerate(parts):
+                            if part.strip():
+                                # Reconstruct the system message
+                                if i > 0:  # Add back the system start token
+                                    reconstructed = "<|im_start|>system" + part
+                                else:
+                                    reconstructed = part
+                                split_predictions.append(reconstructed)
+                    else:
+                        split_predictions.append(pred)
+                
+                if is_main_process:
+                    print(f"DEBUG: Split {len(decoded_preds)} packed predictions into {len(split_predictions)} individual predictions")
+                
+                # Use split predictions if we got a better match
+                if len(split_predictions) > len(decoded_preds):
+                    decoded_preds = split_predictions
+            
+            # Ensure we don't exceed eval dataset size
             max_eval_samples = min(len(decoded_preds), len(eval_dataset))
             
             # Initialize counters
@@ -447,7 +513,7 @@ def create_compute_metrics(eval_dataset):
                 }
             
             if is_main_process:
-                print(f"DEBUG: Evaluating {total_paths} samples (memory optimized)")
+                print(f"DEBUG: Evaluating {total_paths} samples with corrected puzzle matching")
             
             # Process each evaluation sample individually
             for i in range(total_paths):
