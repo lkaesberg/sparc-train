@@ -111,6 +111,31 @@ def expand_dataset_with_individual_solutions(dataset):
     
     return Dataset.from_list(expanded_samples)
 
+# ==============================================================================
+# OVERFITTING PREVENTION AND REGULARIZATION
+# ==============================================================================
+# ISSUE: Large model (4B params) on small dataset (~1750 samples) causes rapid
+# overfitting - train loss drops to ~0 in just 30 steps due to memorization.
+#
+# SYMPTOMS:
+# - Train loss approaches 0 very quickly (< 50 steps)
+# - Large gap between train and eval metrics
+# - Perfect training accuracy but poor generalization
+#
+# SOLUTIONS IMPLEMENTED:
+# 1. LEARNING RATE: Reduced from 5e-5 to 1e-6 (50x smaller)
+# 2. WEIGHT DECAY: Added 0.01 L2 regularization
+# 3. LR SCHEDULER: Cosine decay for gradual learning rate reduction
+# 4. WARMUP: Extended warmup for training stability
+# 5. FULL DATASET: Use complete dataset instead of subset
+# 6. REGULARIZED TRAINING: Slower, more controlled learning
+#
+# MONITORING:
+# - Watch for train/eval metric gap
+# - Stop training if eval metrics plateau while train metrics improve
+# - Consider early stopping based on eval_solution_accuracy
+# ==============================================================================
+
 # Expand both training and evaluation datasets
 if is_main_process:
     print(f"DEBUG: Original train dataset size: {len(dataset)}")
@@ -175,7 +200,7 @@ training_args = SFTConfig(
     eval_steps=250,  # Evaluate less frequently to save memory
     warmup_steps=100,
     max_steps=10000,
-    learning_rate=5e-5,
+    learning_rate=1e-6,  # DRASTICALLY reduced from 5e-5 to prevent overfitting
     per_device_train_batch_size=4,
     per_device_eval_batch_size=1,  # CRITICAL: Set to 1 to prevent sequence packing
     eval_accumulation_steps=1,  # Process eval in smallest possible steps
@@ -204,14 +229,18 @@ training_args = SFTConfig(
     # CRITICAL: Enable padding-free batching for massive memory savings
     padding_free=True,  # Eliminates padding completely, huge memory reduction
     
+    # REGULARIZATION: Add these to prevent overfitting
+    weight_decay=0.01,  # L2 regularization
+    warmup_ratio=0.1,  # Longer warmup to stabilize training
+    lr_scheduler_type="cosine",  # Cosine decay instead of linear
+    dataloader_drop_last=True,  # Ensure consistent batch sizes
+    
     # Additional memory optimizations
     eval_on_start=True,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
     eval_do_concat_batches=False,
     packing=False,
     eval_packing=False,
-    # Additional settings to prevent sequence combination
-    dataloader_drop_last=True,  # Don't drop incomplete batches
 )
 
 # Multi-GPU device setup
