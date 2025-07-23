@@ -1,5 +1,6 @@
 import torch
 import gc
+import numpy as np
 from datasets import load_dataset
 from trl import SFTConfig, SFTTrainer, setup_chat_format
 from sparc.prompt import generate_prompt
@@ -8,7 +9,6 @@ import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from accelerate import PartialState  # Add for multi-GPU support
 import re
-import numpy as np
 from transformers import TrainerCallback
 
 class DebugEvaluationCallback(TrainerCallback):
@@ -293,16 +293,70 @@ def create_compute_metrics(eval_dataset):
                 print(f"DEBUG: predicted_ids type: {type(predicted_ids)}")
                 print(f"DEBUG: predicted_ids device: {predicted_ids.device if hasattr(predicted_ids, 'device') else 'no device'}")
             
-            # Now move to CPU after gather operation is complete
-            if hasattr(predicted_ids, 'cpu'):
-                predicted_ids = predicted_ids.cpu().numpy()
-            elif hasattr(predicted_ids, 'numpy'):
-                predicted_ids = predicted_ids.numpy()
+            # Handle different formats after multi-GPU gather
+            if isinstance(predicted_ids, list):
+                # Multi-GPU gather sometimes returns nested lists
+                if is_main_process:
+                    print(f"DEBUG: Converting list format, length: {len(predicted_ids)}")
+                
+                # Convert nested lists to numpy array
+                import numpy as np
+                try:
+                    predicted_ids = np.array(predicted_ids)
+                    if is_main_process:
+                        print(f"DEBUG: Converted to numpy array with shape: {predicted_ids.shape}")
+                except Exception as e:
+                    if is_main_process:
+                        print(f"DEBUG: Error converting list to array: {e}")
+                        print(f"DEBUG: First few elements: {predicted_ids[:2] if len(predicted_ids) > 0 else 'empty'}")
+                    # Fallback: try to flatten and reshape
+                    try:
+                        # Flatten all nested structures
+                        flat_ids = []
+                        for item in predicted_ids:
+                            if isinstance(item, (list, tuple)):
+                                flat_ids.extend(item)
+                            else:
+                                flat_ids.append(item)
+                        predicted_ids = np.array(flat_ids)
+                        if is_main_process:
+                            print(f"DEBUG: Flattened to shape: {predicted_ids.shape}")
+                    except Exception as e2:
+                        if is_main_process:
+                            print(f"DEBUG: Failed to process predictions: {e2}")
+                        # Return empty metrics if we can't process
+                        return {
+                            "eval_solution_accuracy": 0.0,
+                            "eval_valid_path_rate": 0.0,
+                            "eval_start_end_accuracy": 0.0,
+                            "eval_connection_rate": 0.0,
+                            "eval_non_intersection_rate": 0.0,
+                            "eval_rule_compliance_rate": 0.0,
+                            "eval_correct_solutions": 0,
+                            "eval_valid_paths": 0,
+                            "eval_total_evaluated": 0
+                        }
+            else:
+                # Handle tensor format
+                if hasattr(predicted_ids, 'cpu'):
+                    predicted_ids = predicted_ids.cpu().numpy()
+                elif hasattr(predicted_ids, 'numpy'):
+                    predicted_ids = predicted_ids.numpy()
             
             # Additional memory cleanup after moving to CPU
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+            
+            # Ensure we have a proper 2D array: [num_samples, seq_len]
+            if len(predicted_ids.shape) == 1:
+                # If flattened, try to reshape based on expected sequence length
+                seq_len = 8192  # Based on debug output
+                if len(predicted_ids) % seq_len == 0:
+                    num_samples = len(predicted_ids) // seq_len
+                    predicted_ids = predicted_ids.reshape(num_samples, seq_len)
+                    if is_main_process:
+                        print(f"DEBUG: Reshaped to: {predicted_ids.shape}")
             
             # Process only MINIMAL predictions to avoid OOM
             decoded_preds = []
@@ -314,18 +368,46 @@ def create_compute_metrics(eval_dataset):
             for i in range(num_predictions):
                 try:
                     # Get single prediction (already token IDs)
-                    if hasattr(predicted_ids, '__getitem__'):
+                    if len(predicted_ids.shape) == 2:
+                        # 2D array: [num_samples, seq_len]
                         single_pred_ids = predicted_ids[i]
+                    elif len(predicted_ids.shape) == 1:
+                        # 1D array: assume single sequence
+                        single_pred_ids = predicted_ids
                     else:
-                        single_pred_ids = predicted_ids[i:i+1]
+                        if is_main_process:
+                            print(f"DEBUG: Unexpected predicted_ids shape: {predicted_ids.shape}")
+                        single_pred_ids = predicted_ids[i] if hasattr(predicted_ids, '__getitem__') else predicted_ids
+                    
+                    # Ensure it's a 1D array of integers
+                    if hasattr(single_pred_ids, 'flatten'):
+                        single_pred_ids = single_pred_ids.flatten()
+                    
+                    # Convert to Python list of integers for tokenizer
+                    if hasattr(single_pred_ids, 'tolist'):
+                        single_pred_ids = single_pred_ids.tolist()
+                    elif not isinstance(single_pred_ids, list):
+                        single_pred_ids = list(single_pred_ids)
+                    
+                    # Ensure all elements are integers
+                    single_pred_ids = [int(x) for x in single_pred_ids if isinstance(x, (int, float, np.integer, np.floating))]
+                    
+                    if is_main_process and i == 0:  # Debug first prediction
+                        print(f"DEBUG: First sequence length: {len(single_pred_ids)}")
+                        print(f"DEBUG: First few tokens: {single_pred_ids[:10]}")
                     
                     # Decode this single sequence
                     try:
                         decoded = tokenizer.decode(single_pred_ids, skip_special_tokens=True)
                         decoded_preds.append(decoded)
+                        
+                        if is_main_process and i == 0:  # Debug first decoded prediction
+                            print(f"DEBUG: First decoded text (100 chars): {decoded[:100]}...")
+                            
                     except Exception as decode_e:
                         if is_main_process:
                             print(f"DEBUG: Error decoding prediction {i}: {decode_e}")
+                            print(f"DEBUG: Token sequence type: {type(single_pred_ids)}, length: {len(single_pred_ids) if hasattr(single_pred_ids, '__len__') else 'no length'}")
                         decoded_preds.append("")
                     
                     # Light cleanup after each prediction
