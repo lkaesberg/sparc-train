@@ -105,7 +105,7 @@ training_args = SFTConfig(
     gradient_accumulation_steps=2,
     max_seq_length=4096,  # Reduce sequence length to save memory
     remove_unused_columns=False,
-    group_by_length=True,
+    group_by_length=False,
     optim="adamw_torch_fused",  # Better performance than adamw_torch
     gradient_checkpointing=True,  # Reduce memory usage
     bf16=True,  # Use bfloat16 for better performance if supported
@@ -130,7 +130,9 @@ training_args = SFTConfig(
     # Additional memory optimizations
     eval_on_start=False,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
-    eval_do_concat_batches=False
+    eval_do_concat_batches=False,
+    packing=False,
+    eval_packing=False
 )
 
 # Multi-GPU device setup
