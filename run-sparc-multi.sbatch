@@ -14,7 +14,5 @@ module load cuda/12.6.2
 source activate sparc
 nvidia-smi
 accelerate launch \
-    --multi_gpu \
-    --num_machines 1 \
-    --num_processes 4 \
+    --config_file accelerate.config \
     train_sft.py
