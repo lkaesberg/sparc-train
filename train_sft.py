@@ -95,10 +95,10 @@ training_args = SFTConfig(
     warmup_steps=100,
     max_steps=1000,
     learning_rate=5e-5,
-    per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,  # Keep eval batch size at absolute minimum
+    per_device_train_batch_size=4,
+    per_device_eval_batch_size=4,  # Keep eval batch size at absolute minimum
     eval_accumulation_steps=1,  # Process eval in smallest possible steps
-    gradient_accumulation_steps=16,
+    gradient_accumulation_steps=2,
     max_seq_length=2048,  # Reduce sequence length to save memory
     remove_unused_columns=False,
     group_by_length=True,
@@ -133,7 +133,7 @@ training_args = SFTConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map={'': device_string},  # Proper device placement for multi-GPU
-    attn_implementation="flash_attention_2"
+    #attn_implementation="flash_attention_2"
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
