@@ -214,6 +214,11 @@ def formatting_prompts_func(examples):
 # - Reduces memory by factor of vocab_size (~32,000x smaller!)
 # - Moves to CPU immediately, freeing GPU memory
 #
+# MULTI-GPU FLOW:
+# 1. preprocess_logits_for_metrics: Convert logits→token_ids, KEEP ON GPU
+# 2. Accelerate gather: Coordinate token_ids across GPUs (needs CUDA tensors)  
+# 3. compute_metrics: Move gathered token_ids to CPU, then decode & evaluate
+#
 # This function runs BEFORE compute_metrics, dramatically reducing the
 # memory footprint during evaluation and preventing OOM errors.
 # ==============================================================================
@@ -242,22 +247,22 @@ def preprocess_logits_for_metrics(logits, labels):
         # This dramatically reduces size: [batch, seq_len, vocab_size] -> [batch, seq_len]
         predicted_ids = logits.argmax(dim=-1)
         
-        # Move to CPU immediately to free GPU memory
-        if hasattr(predicted_ids, 'cpu'):
-            predicted_ids = predicted_ids.cpu()
+        # IMPORTANT: Keep on GPU for multi-GPU gather operation
+        # Don't move to CPU here - let Accelerate handle the gather first
+        # predicted_ids stays on GPU for now
         
         # Clear the original logits from GPU memory
         del logits
         
-        # Aggressive memory cleanup
+        # Light memory cleanup (but keep predicted_ids on GPU)
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            torch.cuda.synchronize()
         
         if is_main_process:
             print(f"DEBUG: Output predicted_ids shape: {predicted_ids.shape}")
-            print(f"DEBUG: Reduced tensor size by factor of ~{model.config.vocab_size}")
+            print(f"DEBUG: Output predicted_ids device: {predicted_ids.device}")
+            print(f"DEBUG: Reduced tensor size by factor of vocab_size")
             if torch.cuda.is_available():
                 print(f"DEBUG: CUDA memory after preprocessing: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
     
@@ -280,17 +285,24 @@ def create_compute_metrics(eval_dataset):
                     print(f"DEBUG: CUDA memory at start of compute_metrics: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
             
             # Now predictions are already processed token IDs (not logits!)
+            # After multi-GPU gather, they may still be on GPU
             predicted_ids, labels = eval_pred
             
             if is_main_process:
                 print(f"DEBUG: predicted_ids shape: {predicted_ids.shape if hasattr(predicted_ids, 'shape') else 'no shape'}")
                 print(f"DEBUG: predicted_ids type: {type(predicted_ids)}")
+                print(f"DEBUG: predicted_ids device: {predicted_ids.device if hasattr(predicted_ids, 'device') else 'no device'}")
             
-            # Convert to numpy if it's a tensor
+            # Now move to CPU after gather operation is complete
             if hasattr(predicted_ids, 'cpu'):
                 predicted_ids = predicted_ids.cpu().numpy()
             elif hasattr(predicted_ids, 'numpy'):
                 predicted_ids = predicted_ids.numpy()
+            
+            # Additional memory cleanup after moving to CPU
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             
             # Process only MINIMAL predictions to avoid OOM
             decoded_preds = []
