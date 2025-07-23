@@ -68,11 +68,15 @@ dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
 eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test")
 
 # Limit evaluation dataset size to prevent memory issues
-max_eval_size = 100  # Limit to 100 samples for evaluation
-if len(eval_dataset) > max_eval_size:
+max_eval_size = 500  # Increase limit for more comprehensive evaluation
+# Set max_eval_size = None to process the ENTIRE eval dataset (no limit)
+if max_eval_size is not None and len(eval_dataset) > max_eval_size:
     if is_main_process:  # Only print on main process
         print(f"DEBUG: Limiting eval dataset from {len(eval_dataset)} to {max_eval_size} samples for memory efficiency")
     eval_dataset = eval_dataset.select(range(max_eval_size))
+else:
+    if is_main_process:
+        print(f"DEBUG: Using full eval dataset with {len(eval_dataset)} samples")
 
 # Print memory info if available (only on main process)
 if torch.cuda.is_available() and is_main_process:
@@ -365,12 +369,12 @@ def create_compute_metrics(eval_dataset):
                     if is_main_process:
                         print(f"DEBUG: Reshaped to: {predicted_ids.shape}")
             
-            # Process only MINIMAL predictions to avoid OOM
+            # Process ALL predictions instead of limiting to avoid incomplete evaluation
             decoded_preds = []
-            num_predictions = min(10, len(predicted_ids) if hasattr(predicted_ids, '__len__') else predicted_ids.shape[0])
+            num_predictions = len(predicted_ids) if hasattr(predicted_ids, '__len__') else predicted_ids.shape[0]
             
             if is_main_process:
-                print(f"DEBUG: Processing {num_predictions} predictions (memory optimized)")
+                print(f"DEBUG: Processing ALL {num_predictions} predictions for comprehensive evaluation")
             
             for i in range(num_predictions):
                 try:
