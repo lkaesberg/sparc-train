@@ -196,7 +196,7 @@ def formatting_prompts_func(examples):
                 }
             ]
             
-            formatted_text = tokenizer.apply_chat_template(messages, tokenize=False)
+            formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, enable_thinking=False)
             return formatted_text
         
         # Case 2: Batched examples (values are lists)
@@ -223,7 +223,7 @@ def formatting_prompts_func(examples):
                     }
                 ]
                 
-                formatted_text = tokenizer.apply_chat_template(messages, tokenize=False)
+                formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, enable_thinking=False)
                 output_text.append(formatted_text)
             
             return output_text
