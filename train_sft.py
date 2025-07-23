@@ -119,7 +119,7 @@ training_args = SFTConfig(
     save_steps=500,
     eval_steps=250,  # Evaluate less frequently to save memory
     warmup_steps=100,
-    max_steps=1000,
+    max_steps=10000,
     learning_rate=5e-5,
     per_device_train_batch_size=4,
     per_device_eval_batch_size=1,  # CRITICAL: Set to 1 to prevent sequence packing
@@ -520,41 +520,21 @@ def create_compute_metrics(eval_dataset):
                 # Get the original dataset entry (puzzle)
                 puzzle = eval_dataset[i]
                 
-                if is_main_process:
-                    print(f"\n--- DEBUG: Sample {i+1}/{total_paths} ---")
-                    print(f"Model prediction (first 200 chars): {pred}")
-                    
-                    # Show ground truth solution for comparison
-                    if 'solutions' in puzzle and len(puzzle['solutions']) > 0:
-                        gt_path = puzzle['solutions'][0].get('path', [])
-                        print(f"Ground truth path: {gt_path}")
-                    else:
-                        print(f"No ground truth path found")
+                # Removed detailed per-sample debug output for cleaner logs
                 
                 try:
                     # Extract the path from model response using SPaRC validation
                     extracted_path = extract_solution_path(pred, puzzle)
                     
-                    if is_main_process:
-                        print(f"Extracted path: {extracted_path}")
-                    
                     if extracted_path is not None:
                         # Validate against ground truth
                         is_correct = validate_solution(extracted_path, puzzle)
-                        
-                        if is_main_process:
-                            print(f"Solution correct: {is_correct}")
                         
                         if is_correct:
                             correct_solutions += 1
                         
                         # Get detailed analysis
                         analysis = analyze_path(extracted_path, puzzle)
-                        
-                        if is_main_process:
-                            print(f"Path analysis:")
-                            for criterion, result in analysis.items():
-                                print(f"  - {criterion}: {result}")
                         
                         # Count individual validation criteria
                         if analysis.get("starts_at_start_ends_at_exit", False):
@@ -568,15 +548,11 @@ def create_compute_metrics(eval_dataset):
                             no_rule_crossing += 1
                         if analysis.get("fully_valid_path", False):
                             valid_paths += 1
-                    else:
-                        if is_main_process:
-                            print(f"No path extracted from model prediction")
                 
                 except Exception as e:
                     # Handle cases where path extraction fails
                     if is_main_process:
                         print(f"Error in metrics computation for sample {i}: {e}")
-                        print(f"Model prediction that caused error: {pred}")
                     continue
             
             # Calculate metrics as percentages
