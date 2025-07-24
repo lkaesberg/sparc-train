@@ -545,6 +545,7 @@ trainer = SFTTrainer(
     eval_dataset=eval_dataset_conversational, # Pass the conversational eval dataset
     compute_metrics=compute_metrics_fn,
     processing_class=tokenizer,
+    preprocess_logits_for_metrics=preprocess_logits_for_metrics,
 )
 
 if is_main_process:
