@@ -90,7 +90,7 @@ if is_main_process:
     print(f"DEBUG: Original train dataset size: {len(dataset)}")
     print(f"DEBUG: Original eval dataset size: {len(eval_dataset)}")
 
-dataset = expand_dataset_with_individual_solutions(dataset)
+# dataset = expand_dataset_with_individual_solutions(dataset)
 
 if is_main_process:
     print(f"DEBUG: Expanded train dataset size: {len(dataset)}")
