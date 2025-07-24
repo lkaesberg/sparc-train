@@ -192,11 +192,26 @@ if torch.cuda.is_available() and is_main_process:
 # FALLBACK: If packing still occurs, detect and split packed sequences
 # ==============================================================================
 
+# ==============================================================================
+# FSDP CHECKPOINT MANAGEMENT
+# ==============================================================================
+# ISSUE: FSDP creates very large checkpoint files due to sharded state storage
+# - Each checkpoint can be 10-50GB+ for large models
+# - Multiple checkpoints quickly fill up disk space
+# - FSDP state_dict format is complex and harder to use for inference
+#
+# SOLUTION:
+# - save_strategy="no": Disable automatic checkpoint saving during training
+# - Manual final save: Save only the completed model in standard format
+# - Standard format: Compatible with AutoModelForCausalLM.from_pretrained()
+# - Single save: Saves disk space and simplifies model deployment
+# ==============================================================================
+
 training_args = SFTConfig(
     output_dir="./tmp",
     report_to="wandb",
     logging_steps=10,
-    save_steps=500,
+    save_steps=None,  # Disable intermediate checkpoint saving
     eval_steps=250,  # Evaluate less frequently to save memory
     warmup_steps=100,
     max_steps=10000,
@@ -211,13 +226,13 @@ training_args = SFTConfig(
     optim="adamw_torch_fused",  # Better performance than adamw_torch
     gradient_checkpointing=True,  # Reduce memory usage
     bf16=True,  # Use bfloat16 for better performance if supported
-    save_strategy="steps",  # Save based on steps, not epochs
+    save_strategy="no",  # Disable checkpoint saving during training
     eval_strategy="steps",  # Evaluate based on steps
     do_eval=True,  # Explicitly enable evaluation
     load_best_model_at_end=False,  # Disable to save memory
     metric_for_best_model="eval_solution_accuracy",  # Use your custom metric with eval_ prefix
     greater_is_better=True,  # Higher solution_accuracy is better
-    save_total_limit=2,  # Keep only 2 best checkpoints to save disk space
+    save_total_limit=1,  # Keep only final model when we save manually
     ddp_find_unused_parameters=False,  # Optimize for multi-GPU
     logging_dir="./logs",  # Add logging directory
     logging_first_step=True,  # Log the first step
@@ -692,9 +707,22 @@ if is_main_process:
     print("DEBUG: Starting training...")
 trainer.train()
 
+# Save only the final model (not FSDP checkpoints)
+if is_main_process:
+    print("DEBUG: Training completed. Saving final model...")
+    
+    # Save the final model in standard format
+    final_model_dir = "./final_model"
+    trainer.save_model(final_model_dir)
+    
+    # Also save the tokenizer
+    tokenizer.save_pretrained(final_model_dir)
+    
+    print(f"DEBUG: Final model saved to {final_model_dir}")
+
 # Clean up memory after training
 if is_main_process:
-    print("DEBUG: Training completed. Cleaning up memory...")
+    print("DEBUG: Cleaning up memory...")
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
     if is_main_process:
