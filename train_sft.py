@@ -11,35 +11,7 @@ from accelerate import PartialState  # Add for multi-GPU support
 import re
 from transformers import TrainerCallback
 
-class DebugEvaluationCallback(TrainerCallback):
-    """Custom callback to debug evaluation events and manage memory aggressively"""
-    
-    def on_evaluate(self, args, state, control, model=None, tokenizer=None, **kwargs):
-        if is_main_process:  # Only print on main process
-            print(f"DEBUG: Evaluation started at step {state.global_step}")
-        
-        # Aggressive memory cleanup before evaluation
-        gc.collect()  # Force garbage collection
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()  # Wait for all operations to complete
-            if is_main_process:
-                print(f"DEBUG: Aggressive memory cleanup before evaluation")
-                print(f"DEBUG: CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-    
-    def on_log(self, args, state, control, model=None, tokenizer=None, logs=None, **kwargs):
-        if logs and any(key.startswith('eval_') for key in logs.keys()) and is_main_process:
-            print(f"DEBUG: Evaluation metrics logged at step {state.global_step}: {logs}")
-        
-        # Aggressive memory cleanup after evaluation
-        if logs and any(key.startswith('eval_') for key in logs.keys()):
-            gc.collect()  # Force garbage collection
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()  # Wait for all operations to complete
-                if is_main_process:
-                    print(f"DEBUG: Aggressive memory cleanup after evaluation")
-                    print(f"DEBUG: CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+
 
 model_name = "Qwen/Qwen3-8B"
 
@@ -111,30 +83,7 @@ def expand_dataset_with_individual_solutions(dataset):
     
     return Dataset.from_list(expanded_samples)
 
-# ==============================================================================
-# OVERFITTING PREVENTION AND REGULARIZATION
-# ==============================================================================
-# ISSUE: Large model (4B params) on small dataset (~1750 samples) causes rapid
-# overfitting - train loss drops to ~0 in just 30 steps due to memorization.
-#
-# SYMPTOMS:
-# - Train loss approaches 0 very quickly (< 50 steps)
-# - Large gap between train and eval metrics
-# - Perfect training accuracy but poor generalization
-#
-# SOLUTIONS IMPLEMENTED:
-# 1. LEARNING RATE: Reduced from 5e-5 to 1e-6 (50x smaller)
-# 2. WEIGHT DECAY: Added 0.01 L2 regularization
-# 3. LR SCHEDULER: Cosine decay for gradual learning rate reduction
-# 4. WARMUP: Extended warmup for training stability
-# 5. FULL DATASET: Use complete dataset instead of subset
-# 6. REGULARIZED TRAINING: Slower, more controlled learning
-#
-# MONITORING:
-# - Watch for train/eval metric gap
-# - Stop training if eval metrics plateau while train metrics improve
-# - Consider early stopping based on eval_solution_accuracy
-# ==============================================================================
+
 
 # Expand both training and evaluation datasets
 if is_main_process:
@@ -147,65 +96,6 @@ if is_main_process:
     print(f"DEBUG: Expanded train dataset size: {len(dataset)}")
 
 
-# Limit evaluation dataset size to prevent memory issues (after expansion)
-max_eval_size = 500  # Increase limit since we now have more diverse samples
-# Set max_eval_size = None to process the ENTIRE eval dataset (no limit)
-if max_eval_size is not None and len(eval_dataset) > max_eval_size:
-    if is_main_process:  # Only print on main process
-        print(f"DEBUG: Limiting eval dataset from {len(eval_dataset)} to {max_eval_size} samples for memory efficiency")
-    eval_dataset = eval_dataset.select(range(max_eval_size))
-else:
-    if is_main_process:
-        print(f"DEBUG: Using full eval dataset with {len(eval_dataset)} samples")
-
-# Print memory info if available (only on main process)
-if torch.cuda.is_available() and is_main_process:
-    print(f"DEBUG: CUDA memory allocated before training: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-    print(f"DEBUG: CUDA memory reserved before training: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
-    print(f"DEBUG: CUDA memory total: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
-    
-    # Force cleanup before training
-    gc.collect()
-    torch.cuda.empty_cache()
-    torch.cuda.synchronize()
-    print(f"DEBUG: After cleanup - CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-
-# ==============================================================================
-# CRITICAL: PREVENTING SEQUENCE PACKING DURING EVALUATION
-# ==============================================================================
-# ISSUE: Even with packing=False, SFT evaluation can still pack multiple samples
-# into single sequences, causing incorrect puzzle-to-path matching.
-#
-# SYMPTOMS:
-# - Getting 32 predictions instead of 500 eval samples
-# - Long sequences (11556+ tokens) containing multiple puzzles
-# - Decoded text with multiple <|im_start|>system messages
-# - Incorrect validation because pred[i] doesn't match eval_dataset[i]
-#
-# SOLUTION SETTINGS:
-# - per_device_eval_batch_size=1: Force individual sample processing
-# - group_by_length=False: Prevent length-based batching
-# - packing=False, eval_packing=False: Explicit packing disable
-# - eval_do_concat_batches=False: Prevent batch concatenation
-# - remove_unused_columns=False: Keep dataset structure intact
-#
-# FALLBACK: If packing still occurs, detect and split packed sequences
-# ==============================================================================
-
-# ==============================================================================
-# FSDP CHECKPOINT MANAGEMENT
-# ==============================================================================
-# ISSUE: FSDP creates very large checkpoint files due to sharded state storage
-# - Each checkpoint can be 10-50GB+ for large models
-# - Multiple checkpoints quickly fill up disk space
-# - FSDP state_dict format is complex and harder to use for inference
-#
-# SOLUTION:
-# - save_strategy="no": Disable automatic checkpoint saving during training
-# - Manual final save: Save only the completed model in standard format
-# - Standard format: Compatible with AutoModelForCausalLM.from_pretrained()
-# - Single save: Saves disk space and simplifies model deployment
-# ==============================================================================
 
 training_args = SFTConfig(
     output_dir="./tmp",
@@ -263,7 +153,8 @@ training_args = SFTConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map={'': device_string},  # Proper device placement for multi-GPU
-    attn_implementation="flash_attention_2"
+    attn_implementation="flash_attention_2",
+    torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -271,87 +162,53 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
-def formatting_prompts_func(examples):
-    # Handle both individual and batched calls from SFTTrainer
+def transform_to_conversational_format(dataset):
+    """
+    Transform dataset to conversational format required for assistant_only_loss=True.
     
-    # Check if this is a single example (batched=False) or batch (batched=True)
-    if isinstance(examples, dict) and len(examples) > 0:
-        first_key = list(examples.keys())[0]
-        first_value = examples[first_key]
+    TRL expects datasets with 'messages' field containing:
+    [
+        {"role": "system", "content": "..."},
+        {"role": "user", "content": "..."},
+        {"role": "assistant", "content": "..."}
+    ]
+    """
+    def format_sample(example):
+        # Create the solution path string without nested f-strings
+        path_coords = ', '.join([f"({point['x']}, {point['y']})" for point in example['solutions'][0]['path']])
+        solution_text = f"#### ({path_coords})"
         
-        # Case 1: Individual example (values are not lists)
-        if not isinstance(first_value, list):
-            messages = [
-                  {
-                    "role": "system",
-                    "content": "You are an expert at solving puzzles games.",
-                  },
-                  {
-                    "role": "user", 
-                    "content": generate_prompt(examples)
-                  },
-                {
-                    "role": "assistant",
-                    "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', examples['solutions'][0]['path']))})"
-                }
-            ]
-            
-            formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, enable_thinking=False)
-            return formatted_text
-        
-        # Case 2: Batched examples (values are lists)
-        else:
-            output_text = []
-            
-            # Iterate through all examples in the batch
-            for i in range(len(examples["solutions"])):
-                # Extract individual example from batch
-                example = {key: values[i] for key, values in examples.items()}
-                
-                messages = [
-                      {
-                        "role": "system",
-                        "content": "You are an expert at solving puzzles games.",
-                      },
-                      {
-                        "role": "user", 
-                        "content": generate_prompt(example)
-                      },
-                    {
-                        "role": "assistant",
-                        "content": f"#### ({', '.join(map(lambda x: f'({x["x"]}, {x["y"]})', example['solutions'][0]['path']))})"
-                    }
-                ]
-                
-                formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, enable_thinking=False)
-                output_text.append(formatted_text)
-            
-            return output_text
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an expert at solving puzzles games."
+            },
+            {
+                "role": "user", 
+                "content": generate_prompt(example)
+            },
+            {
+                "role": "assistant",
+                "content": solution_text
+            }
+        ]
+        return {"messages": messages}
+    
+    return dataset.map(format_sample, remove_columns=dataset.column_names)
 
-# ==============================================================================
-# MEMORY OPTIMIZATION: preprocess_logits_for_metrics
-# ==============================================================================
-# The preprocess_logits_for_metrics function is CRITICAL for memory efficiency:
-#
-# WITHOUT this function:
-# - Full logits tensor: [batch_size, seq_len, vocab_size] 
-# - Example: [4, 2048, 32000] = ~1GB per batch in GPU memory
-# - Causes OOM during evaluation
-#
-# WITH this function:
-# - Converts to token IDs: [batch_size, seq_len]
-# - Example: [4, 2048] = ~32KB per batch 
-# - Reduces memory by factor of vocab_size (~32,000x smaller!)
-# - Moves to CPU immediately, freeing GPU memory
-#
-# MULTI-GPU FLOW:
-# 1. preprocess_logits_for_metrics: Convert logits→token_ids, KEEP ON GPU
-# 2. Accelerate gather: Coordinate token_ids across GPUs (needs CUDA tensors)  
-# 3. compute_metrics: Move gathered token_ids to CPU, then decode & evaluate
-#
-# This function runs BEFORE compute_metrics, dramatically reducing the
-# memory footprint during evaluation and preventing OOM errors.
-# ==============================================================================
+# Transform datasets to conversational format
+dataset = transform_to_conversational_format(dataset)
+
+# Create conversational eval dataset for SFTTrainer (needs assistant_only_loss=True)
+eval_dataset_conversational = transform_to_conversational_format(eval_dataset)
+# Keep original eval_dataset for metrics computation (unchanged)
+
+if is_main_process:
+    print(f"DEBUG: Transformed train dataset to conversational format")
+    print(f"DEBUG: Sample conversation: {dataset[0]['messages']}")
+    print(f"DEBUG: Created conversational eval dataset for SFTTrainer")
+    print(f"DEBUG: Kept original eval_dataset for metrics computation")
+    print(f"DEBUG: Original eval entry fields: {list(eval_dataset[0].keys())}")
 
 def preprocess_logits_for_metrics(logits, labels):
     """
@@ -388,13 +245,6 @@ def preprocess_logits_for_metrics(logits, labels):
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        
-        if is_main_process:
-            print(f"DEBUG: Output predicted_ids shape: {predicted_ids.shape}")
-            print(f"DEBUG: Output predicted_ids device: {predicted_ids.device}")
-            print(f"DEBUG: Reduced tensor size by factor of vocab_size")
-            if torch.cuda.is_available():
-                print(f"DEBUG: CUDA memory after preprocessing: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
     
     return predicted_ids
 
@@ -697,11 +547,10 @@ trainer = SFTTrainer(
     processing_class=tokenizer,
     args=training_args,
     train_dataset=dataset,
-    eval_dataset=eval_dataset,
-    formatting_func=formatting_prompts_func,
+    eval_dataset=eval_dataset_conversational, # Pass the conversational eval dataset
     compute_metrics=compute_metrics_fn,
     preprocess_logits_for_metrics=preprocess_logits_for_metrics,  # CRITICAL: Reduces memory usage
-    callbacks=[DebugEvaluationCallback()],
+
 )
 
 if is_main_process:
