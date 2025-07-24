@@ -256,6 +256,7 @@ training_args = SFTConfig(
     eval_do_concat_batches=False,
     packing=False,
     eval_packing=False,
+    assistant_only_loss=True
 )
 
 # Multi-GPU device setup
