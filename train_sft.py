@@ -102,7 +102,7 @@ training_args = SFTConfig(
     report_to="wandb",
     logging_steps=10,
     save_steps=None,  # Disable intermediate checkpoint saving
-    eval_steps=250,  # Evaluate less frequently to save memory
+    eval_steps=100,  # Evaluate less frequently to save memory
     warmup_steps=100,
     max_steps=10000,
     learning_rate=1e-6,  # DRASTICALLY reduced from 5e-5 to prevent overfitting
@@ -141,7 +141,7 @@ training_args = SFTConfig(
     dataloader_drop_last=True,  # Ensure consistent batch sizes
     
     # Additional memory optimizations
-    eval_on_start=True,  # Don't evaluate at start
+    eval_on_start=False,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
     eval_do_concat_batches=False,
     packing=False,
