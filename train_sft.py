@@ -41,7 +41,7 @@ class DebugEvaluationCallback(TrainerCallback):
                     print(f"DEBUG: Aggressive memory cleanup after evaluation")
                     print(f"DEBUG: CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
 
-model_name = "Qwen/Qwen3-4B"
+model_name = "Qwen/Qwen3-8B"
 
 # Multi-GPU device setup - get this early to check if we're main process
 device_string = PartialState().process_index
