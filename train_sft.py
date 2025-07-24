@@ -13,7 +13,7 @@ from transformers import TrainerCallback
 
 
 
-model_name = "Qwen/Qwen3-8B"
+model_name = "Qwen/Qwen3-0.6B"
 
 # Multi-GPU device setup - get this early to check if we're main process
 device_string = PartialState().process_index
@@ -549,8 +549,6 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     eval_dataset=eval_dataset_conversational, # Pass the conversational eval dataset
     compute_metrics=compute_metrics_fn,
-    preprocess_logits_for_metrics=preprocess_logits_for_metrics,  # CRITICAL: Reduces memory usage
-
 )
 
 if is_main_process:
