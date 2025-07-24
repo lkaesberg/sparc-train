@@ -156,7 +156,28 @@ model = AutoModelForCausalLM.from_pretrained(
     attn_implementation="flash_attention_2",
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct", use_fast=True)
+# Qwen models often don't ship a template that exposes assistant masks the way TRL expects.
+tokenizer.chat_template = """{{ bos_token if bos_token is defined else '' }}\
+{% for m in messages %}
+{% if m['role'] == 'system' %}{{ m['content'] }}\n{% endif %}
+{% if m['role'] == 'user' %}
+<|im_start|>user
+{{ m['content'] }}<|im_end|>
+{% elif m['role'] == 'assistant' %}
+<|im_start|>assistant
+{{ m['content'] }}<|im_end|>
+{% endif %}
+{% endfor %}
+{% if add_generation_prompt %}
+<|im_start|>assistant
+{% endif %}
+{% generation %}"""
+
+# (Optional but common)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
 
 def transform_to_conversational_format(dataset):
     """
@@ -544,6 +565,7 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     eval_dataset=eval_dataset_conversational, # Pass the conversational eval dataset
     compute_metrics=compute_metrics_fn,
+    processing_class=tokenizer,
 )
 
 if is_main_process:
