@@ -160,8 +160,9 @@ tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct", use_fast=T
 # Qwen models often don't ship a template that exposes assistant masks the way TRL expects.
 tokenizer.chat_template = """{{ bos_token if bos_token is defined else '' }}\
 {% for m in messages %}
-{% if m['role'] == 'system' %}{{ m['content'] }}\n{% endif %}
-{% if m['role'] == 'user' %}
+{% if m['role'] == 'system' %}
+{{ m['content'] }}
+{% elif m['role'] == 'user' %}
 <|im_start|>user
 {{ m['content'] }}<|im_end|>
 {% elif m['role'] == 'assistant' %}
@@ -172,7 +173,8 @@ tokenizer.chat_template = """{{ bos_token if bos_token is defined else '' }}\
 {% if add_generation_prompt %}
 <|im_start|>assistant
 {% endif %}
-{% generation %}"""
+{% generation %}
+{% endgeneration %}"""
 
 # (Optional but common)
 if tokenizer.pad_token is None:
