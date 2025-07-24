@@ -156,30 +156,7 @@ model = AutoModelForCausalLM.from_pretrained(
     attn_implementation="flash_attention_2",
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct", use_fast=True)
-# Qwen models often don't ship a template that exposes assistant masks the way TRL expects.
-tokenizer.chat_template = """{{ bos_token if bos_token is defined else '' }}\
-{% for m in messages %}
-{% if m['role'] == 'system' %}
-{{ m['content'] }}
-{% elif m['role'] == 'user' %}
-<|im_start|>user
-{{ m['content'] }}<|im_end|>
-{% elif m['role'] == 'assistant' %}
-<|im_start|>assistant
-{{ m['content'] }}<|im_end|>
-{% endif %}
-{% endfor %}
-{% if add_generation_prompt %}
-<|im_start|>assistant
-{% endif %}
-{% generation %}
-{% endgeneration %}"""
-
-# (Optional but common)
-if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 def transform_to_conversational_format(dataset):
     """
@@ -211,7 +188,14 @@ def transform_to_conversational_format(dataset):
                 "content": solution_text
             }
         ]
-        return {"messages": messages}
+        tokenized_chat = tokenizer.apply_chat_template(
+            messages, 
+            tokenize=False, 
+            add_generation_prompt=True,
+            enable_thinking=False
+        )
+        
+        return {"text": tokenized_chat}
     
     return dataset.map(format_sample, remove_columns=dataset.column_names)
 
