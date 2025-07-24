@@ -141,12 +141,12 @@ training_args = SFTConfig(
     dataloader_drop_last=True,  # Ensure consistent batch sizes
     
     # Additional memory optimizations
-    eval_on_start=False,  # Don't evaluate at start
+    eval_on_start=True,  # Don't evaluate at start
     include_inputs_for_metrics=False,  # Don't include inputs in metrics computation
     eval_do_concat_batches=False,
     packing=False,
     eval_packing=False,
-    assistant_only_loss=True
+    #assistant_only_loss=True
 )
 
 # Multi-GPU device setup
