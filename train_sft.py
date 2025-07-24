@@ -158,10 +158,6 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-# Set pad token if not present
-if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
-
 def transform_to_conversational_format(dataset):
     """
     Transform dataset to conversational format required for assistant_only_loss=True.
@@ -544,7 +540,6 @@ if is_main_process:  # Only print debug info on main process
 
 trainer = SFTTrainer(
     model=model,
-    processing_class=tokenizer,
     args=training_args,
     train_dataset=dataset,
     eval_dataset=eval_dataset_conversational, # Pass the conversational eval dataset
