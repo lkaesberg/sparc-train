@@ -188,14 +188,7 @@ def transform_to_conversational_format(dataset):
                 "content": solution_text
             }
         ]
-        tokenized_chat = tokenizer.apply_chat_template(
-            messages, 
-            tokenize=False, 
-            add_generation_prompt=True,
-            enable_thinking=False
-        )
-        
-        return {"text": tokenized_chat}
+        return {"messages": messages}
     
     return dataset.map(format_sample, remove_columns=dataset.column_names)
 
