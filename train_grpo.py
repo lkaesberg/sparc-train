@@ -128,6 +128,7 @@ training_args = GRPOConfig(
     # GRPO-specific parameters
     max_completion_length=1024,  # Maximum completion length
     temperature=0.7,  # Sampling temperature
+    num_generations=4,
     
     # REGULARIZATION
     weight_decay=0.01,
