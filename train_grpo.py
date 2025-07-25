@@ -105,7 +105,6 @@ training_args = GRPOConfig(
     per_device_eval_batch_size=1,
     eval_accumulation_steps=1,
     gradient_accumulation_steps=4,  # Higher gradient accumulation
-    max_seq_length=4096,
     remove_unused_columns=False,
     group_by_length=False,
     optim="adamw_torch_fused",
@@ -128,7 +127,7 @@ training_args = GRPOConfig(
     
     # GRPO-specific parameters
     length_penalty=1.0,  # Penalty for longer sequences
-    max_completion_length=512,  # Maximum completion length
+    max_completion_length=1024,  # Maximum completion length
     temperature=0.7,  # Sampling temperature
     
     # REGULARIZATION
@@ -136,6 +135,9 @@ training_args = GRPOConfig(
     warmup_ratio=0.1,
     lr_scheduler_type="cosine",
     dataloader_drop_last=True,
+    
+    # FSDP optimizations for GRPO
+    use_liger_loss=True,  # 40% memory savings
 )
 
 # Multi-GPU device setup
