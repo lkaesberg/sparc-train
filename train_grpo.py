@@ -126,7 +126,6 @@ training_args = GRPOConfig(
     prediction_loss_only=False,
     
     # GRPO-specific parameters
-    length_penalty=1.0,  # Penalty for longer sequences
     max_completion_length=1024,  # Maximum completion length
     temperature=0.7,  # Sampling temperature
     
