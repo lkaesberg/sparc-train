@@ -126,7 +126,7 @@ training_args = GRPOConfig(
     prediction_loss_only=False,
     
     # GRPO-specific parameters
-    max_completion_length=8192,  # Maximum completion length
+    max_completion_length=500000,  # Maximum completion length
     temperature=0.7,  # Sampling temperature
     num_generations=4,
     
