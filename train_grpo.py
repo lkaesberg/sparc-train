@@ -128,7 +128,12 @@ training_args = GRPOConfig(
     # GRPO-specific parameters
     max_completion_length=500000,  # Maximum completion length
     temperature=0.7,  # Sampling temperature
-    num_generations=4,
+    num_generations=4,  # Reduced from default 8 for memory efficiency
+    
+    # vLLM acceleration for generation
+    use_vllm=True,  # Enable vLLM for faster generation
+    vllm_mode="colocate",  # Run vLLM in same process, sharing GPU memory
+    vllm_gpu_memory_utilization=0.4,  # Reserve 40% of GPU memory for vLLM
     
     # REGULARIZATION
     weight_decay=0.01,
