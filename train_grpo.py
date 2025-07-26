@@ -200,12 +200,19 @@ def create_sparc_validation_reward(original_dataset):
                 else:
                     prompt_text = str(prompt)
                 
+                # Handle both string completions and conversation format
+                if isinstance(completion, list) and len(completion) > 0 and 'content' in completion[0]:
+                    completion_text = completion[0]['content']
+                else:
+                    completion_text = str(completion)
+                
                 # Look up the original puzzle data
                 puzzle = prompt_to_puzzle.get(prompt_text)
                 
                 if puzzle is None:
                     # Fallback: try basic format validation
-                    if "####" in completion and "(" in completion and ")" in completion:
+                    print(f"DEBUG: No puzzle found for prompt")
+                    if "####" in completion_text and "(" in completion_text and ")" in completion_text:
                         reward = 0.2  # Small reward for format
                     else:
                         reward = 0.0
@@ -213,7 +220,7 @@ def create_sparc_validation_reward(original_dataset):
                     continue
                 
                 # Try to extract solution path from completion
-                extracted_path = extract_solution_path(completion, puzzle)
+                extracted_path = extract_solution_path(completion_text, puzzle)
                 
                 if extracted_path is not None:
                     # Use the same validation logic as SFT trainer
@@ -237,7 +244,7 @@ def create_sparc_validation_reward(original_dataset):
                             reward += 0.25
                 else:
                     # No valid path extracted - give small reward for format
-                    if "####" in completion and "(" in completion and ")" in completion:
+                    if "####" in completion_text and "(" in completion_text and ")" in completion_text:
                         reward = 0.1  # Small reward for attempting correct format
                     else:
                         reward = 0.0
