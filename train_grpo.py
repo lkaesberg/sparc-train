@@ -152,7 +152,17 @@ model = AutoModelForCausalLM.from_pretrained(
     attn_implementation="flash_attention_2",
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
-tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+# Ensure correct padding for Flash Attention and vLLM
+tokenizer.padding_side = "left"
+# Ensure pad token is set
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+    
+if is_main_process:
+    print(f"DEBUG: Tokenizer padding_side set to: {tokenizer.padding_side}")
+    print(f"DEBUG: Tokenizer pad_token: {tokenizer.pad_token}")
+    print(f"DEBUG: Tokenizer pad_token_id: {tokenizer.pad_token_id}")
 
 def transform_to_prompt_format(dataset):
     """Transform dataset to the format expected by GRPO (prompt-only format)"""
@@ -211,7 +221,15 @@ def create_sparc_validation_reward(original_dataset):
                 
                 if puzzle is None:
                     # Fallback: try basic format validation
-                    print(f"DEBUG: No puzzle found for prompt")
+                    if is_main_process and i < 3:  # Only print first few for debugging
+                        print(f"DEBUG: No puzzle found for prompt:")
+                        print(f"DEBUG: Prompt text (first 100 chars): {prompt_text[:100]}...")
+                        print(f"DEBUG: Available puzzle prompts: {len(prompt_to_puzzle)} total")
+                        # Show first few available prompts for comparison
+                        available_prompts = list(prompt_to_puzzle.keys())[:2]
+                        for j, avail_prompt in enumerate(available_prompts):
+                            print(f"DEBUG: Available prompt {j} (first 100 chars): {avail_prompt[:100]}...")
+                    
                     if "####" in completion_text and "(" in completion_text and ")" in completion_text:
                         reward = 0.2  # Small reward for format
                     else:
