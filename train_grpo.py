@@ -152,7 +152,7 @@ model = AutoModelForCausalLM.from_pretrained(
     attn_implementation="flash_attention_2",
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
 
 def transform_to_prompt_format(dataset):
     """Transform dataset to the format expected by GRPO (prompt-only format)"""
