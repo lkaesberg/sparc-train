@@ -151,6 +151,7 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map={'': device_string},  # Proper device placement for multi-GPU
     attn_implementation="flash_attention_2",
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
+    padding_side="left"
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 # Ensure correct padding for Flash Attention and vLLM
