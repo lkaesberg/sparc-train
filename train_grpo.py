@@ -101,7 +101,7 @@ training_args = GRPOConfig(
     warmup_steps=100,
     max_steps=10000,
     learning_rate=5e-6,  # Lower learning rate for GRPO
-    per_device_train_batch_size=2,  # Smaller batch size for GRPO
+    per_device_train_batch_size=1,  # Reduce per-device batch size to save memory
     per_device_eval_batch_size=1,
     eval_accumulation_steps=1,
     gradient_accumulation_steps=4,  # Higher gradient accumulation
@@ -133,7 +133,7 @@ training_args = GRPOConfig(
     # vLLM acceleration for generation
     use_vllm=True,  # Enable vLLM for faster generation
     vllm_mode="colocate",  # Run vLLM in same process, sharing GPU memory
-    vllm_gpu_memory_utilization=0.4,  # Reserve 40% of GPU memory for vLLM
+    vllm_gpu_memory_utilization=0.3,  # Lower vLLM GPU memory utilization to reduce OOM risk
     
     # REGULARIZATION
     weight_decay=0.01,
@@ -142,17 +142,20 @@ training_args = GRPOConfig(
     dataloader_drop_last=True,
     
     # FSDP optimizations for GRPO
-    #use_liger_loss=True,  # 40% memory savings
+    use_liger_loss=True,  # 40% memory savings
 )
 
 # Multi-GPU device setup
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     #device_map={'': device_string},  # Proper device placement for multi-GPU
-    #attn_implementation="flash_attention_2",
-    #torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
+    attn_implementation="sdpa",
+    torch_dtype=torch.bfloat16,
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+# Disable cache during training to save memory
+model.config.use_cache = False
 
 
 def transform_to_prompt_format(dataset):
