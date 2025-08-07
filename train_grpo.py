@@ -195,23 +195,25 @@ if is_main_process:
     print(f"DEBUG: Transformed datasets to GRPO prompt format")
     print(f"DEBUG: Sample prompt: {dataset[0]['prompt'][:200]}...")
 
-# Custom collator to enforce left padding for Flash Attention and preserve prompts for GRPO generation
-def grpo_left_pad_collator(features):
-    prompts = [f["prompt"] for f in features]
-    # Render conversations to plain text with a generation cue
-    texts = [
-        tokenizer.apply_chat_template(p, tokenize=False, add_generation_prompt=True)
-        for p in prompts
-    ]
-    batch = tokenizer(
-        texts,
-        padding=True,  # uses tokenizer.padding_side=="left"
-        truncation=True,
-        return_tensors="pt",
-    )
-    # Preserve original prompts for GRPO's generation/reward steps
-    batch["prompt"] = prompts
-    return batch
+# Wrapper to force left padding/truncation for all tokenization calls used by TRL
+class LeftPadTokenizerWrapper:
+    def __init__(self, base_tokenizer):
+        self._t = base_tokenizer
+        # Ensure base tokenizer is configured for left padding/truncation
+        self._t.padding_side = "left"
+        self._t.truncation_side = "left"
+
+    def __call__(self, *args, **kwargs):
+        # Default to padding and truncation if not specified
+        kwargs.setdefault("padding", True)
+        kwargs.setdefault("truncation", True)
+        # Enforce left padding on every call
+        self._t.padding_side = "left"
+        self._t.truncation_side = "left"
+        return self._t(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._t, name)
 
 def create_sparc_validation_reward(original_dataset):
     """
@@ -326,13 +328,15 @@ for example in original_eval_dataset:  # Use original eval dataset
 sparc_reward_func = create_sparc_validation_reward(combined_dataset)
 
 # Initialize GRPO Trainer
+# Wrap tokenizer to enforce left padding from within TRL calls
+tokenizer = LeftPadTokenizerWrapper(tokenizer)
+
 trainer = GRPOTrainer(
     model=model,
     args=training_args,
     train_dataset=dataset,
     eval_dataset=eval_dataset_grpo,  # Use the transformed eval dataset
     processing_class=tokenizer,
-    data_collator=grpo_left_pad_collator,
     reward_funcs=sparc_reward_func,  # Use SPaRC validation-based reward function
 )
 
