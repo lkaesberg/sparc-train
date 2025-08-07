@@ -142,38 +142,18 @@ training_args = GRPOConfig(
     dataloader_drop_last=True,
     
     # FSDP optimizations for GRPO
-    use_liger_loss=True,  # 40% memory savings
+    #use_liger_loss=True,  # 40% memory savings
 )
 
 # Multi-GPU device setup
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    device_map={'': device_string},  # Proper device placement for multi-GPU
-    attn_implementation="flash_attention_2",
-    torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
+    #device_map={'': device_string},  # Proper device placement for multi-GPU
+    #attn_implementation="flash_attention_2",
+    #torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-# Ensure chat formatting and special tokens are properly set up if not already present
-if getattr(tokenizer, "chat_template", None) is None:
-    model, tokenizer = setup_chat_format(model, tokenizer)
-# Ensure correct padding for Flash Attention and vLLM
-tokenizer.padding_side = "left"
-# Prefer keeping the most recent tokens when truncating long prompts
-tokenizer.truncation_side = "left"
-# Ensure pad token is set
-if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
-# Extra safety: ensure model and generation configs use the same pad/eos ids
-model.config.pad_token_id = tokenizer.pad_token_id
-model.config.eos_token_id = tokenizer.eos_token_id
-model.generation_config.pad_token_id = tokenizer.pad_token_id
-model.generation_config.eos_token_id = tokenizer.eos_token_id
-assert tokenizer.padding_side == "left", "Tokenizer must use left padding for Qwen3 Flash Attention batched generation"
-    
-if is_main_process:
-    print(f"DEBUG: Tokenizer padding_side set to: {tokenizer.padding_side}")
-    print(f"DEBUG: Tokenizer pad_token: {tokenizer.pad_token}")
-    print(f"DEBUG: Tokenizer pad_token_id: {tokenizer.pad_token_id}")
+
 
 def transform_to_prompt_format(dataset):
     """Transform dataset to the format expected by GRPO (prompt-only format)"""
