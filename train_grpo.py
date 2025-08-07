@@ -153,8 +153,9 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-# Ensure chat formatting and special tokens are properly set up for this model/tokenizer
-model, tokenizer = setup_chat_format(model, tokenizer)
+# Ensure chat formatting and special tokens are properly set up if not already present
+if getattr(tokenizer, "chat_template", None) is None:
+    model, tokenizer = setup_chat_format(model, tokenizer)
 # Ensure correct padding for Flash Attention and vLLM
 tokenizer.padding_side = "left"
 # Prefer keeping the most recent tokens when truncating long prompts
