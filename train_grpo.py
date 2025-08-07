@@ -153,11 +153,21 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+# Ensure chat formatting and special tokens are properly set up for this model/tokenizer
+model, tokenizer = setup_chat_format(model, tokenizer)
 # Ensure correct padding for Flash Attention and vLLM
 tokenizer.padding_side = "left"
+# Prefer keeping the most recent tokens when truncating long prompts
+tokenizer.truncation_side = "left"
 # Ensure pad token is set
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
+# Extra safety: ensure model and generation configs use the same pad/eos ids
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.eos_token_id = tokenizer.eos_token_id
+model.generation_config.pad_token_id = tokenizer.pad_token_id
+model.generation_config.eos_token_id = tokenizer.eos_token_id
+assert tokenizer.padding_side == "left", "Tokenizer must use left padding for Qwen3 Flash Attention batched generation"
     
 if is_main_process:
     print(f"DEBUG: Tokenizer padding_side set to: {tokenizer.padding_side}")
@@ -183,6 +193,24 @@ eval_dataset_grpo = transform_to_prompt_format(original_eval_dataset)
 if is_main_process:
     print(f"DEBUG: Transformed datasets to GRPO prompt format")
     print(f"DEBUG: Sample prompt: {dataset[0]['prompt'][:200]}...")
+
+# Custom collator to enforce left padding for Flash Attention and preserve prompts for GRPO generation
+def grpo_left_pad_collator(features):
+    prompts = [f["prompt"] for f in features]
+    # Render conversations to plain text with a generation cue
+    texts = [
+        tokenizer.apply_chat_template(p, tokenize=False, add_generation_prompt=True)
+        for p in prompts
+    ]
+    batch = tokenizer(
+        texts,
+        padding=True,  # uses tokenizer.padding_side=="left"
+        truncation=True,
+        return_tensors="pt",
+    )
+    # Preserve original prompts for GRPO's generation/reward steps
+    batch["prompt"] = prompts
+    return batch
 
 def create_sparc_validation_reward(original_dataset):
     """
@@ -303,6 +331,7 @@ trainer = GRPOTrainer(
     train_dataset=dataset,
     eval_dataset=eval_dataset_grpo,  # Use the transformed eval dataset
     processing_class=tokenizer,
+    data_collator=grpo_left_pad_collator,
     reward_funcs=sparc_reward_func,  # Use SPaRC validation-based reward function
 )
 
