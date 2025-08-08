@@ -11,7 +11,7 @@
 module load gcc/13.2.0
 module load cuda/12.6.2
 
-source activate sparc
+source activate vllm
 
 # Resolve node list
 NODELIST=( $(scontrol show hostnames ${SLURM_JOB_NODELIST}) )
@@ -25,7 +25,7 @@ echo "vLLM node:  $VLLM_NODE"
 srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
     nvidia-smi; \
-    source activate sparc; \
+    source activate vllm; \
     python -u -m vllm.entrypoints.openai.api_server \
       --model Qwen/Qwen3-0.6B \
       --host 0.0.0.0 --port 8000 \
@@ -39,7 +39,7 @@ sleep 30
 srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
   bash -lc "\
     nvidia-smi; \
-    source activate sparc; \
+    source activate vllm; \
     python -m accelerate.commands.launch --config_file fsdp.config \
       train_grpo_vllm_min.py --model Qwen/Qwen3-0.6B --vllm_server_host ${VLLM_NODE} \
       --wandb_project sparc-grpo --wandb_entity larskaesberg-university-of-g-ttingen \
