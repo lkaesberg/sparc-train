@@ -25,7 +25,12 @@ echo "vLLM node:  $VLLM_NODE"
 srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
     nvidia-smi; \
-    vllm serve Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000 --tensor-parallel-size 4 --gpu-memory-utilization 0.9 \
+    source activate sparc; \
+    python -u -m vllm.entrypoints.openai.api_server \
+      --model Qwen/Qwen3-0.6B \
+      --host 0.0.0.0 --port 8000 \
+      --tensor-parallel-size 4 \
+      --gpu-memory-utilization 0.9 \
   " &
 
 sleep 30
@@ -34,7 +39,8 @@ sleep 30
 srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
   bash -lc "\
     nvidia-smi; \
-    accelerate launch --config_file fsdp.config \
+    source activate sparc; \
+    python -m accelerate.commands.launch --config_file fsdp.config \
       train_grpo_vllm_min.py --model Qwen/Qwen3-0.6B --vllm_server_host ${VLLM_NODE} \
       --wandb_project sparc-grpo --wandb_entity larskaesberg-university-of-g-ttingen \
   "
