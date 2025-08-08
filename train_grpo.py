@@ -133,7 +133,7 @@ training_args = GRPOConfig(
     # vLLM acceleration for generation
     use_vllm=True,  # Enable vLLM for faster generation
     vllm_mode="colocate",  # Run vLLM in same process, sharing GPU memory
-    vllm_gpu_memory_utilization=0.3,  # Lower vLLM GPU memory utilization to reduce OOM risk
+    vllm_gpu_memory_utilization=0.15,  # Lower vLLM GPU memory utilization to reduce OOM risk
     
     # REGULARIZATION
     weight_decay=0.01,
