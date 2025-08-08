@@ -2,8 +2,8 @@
 #SBATCH --job-name=sparc-grpo-vllm
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=2
-#SBATCH --ntasks=2
-#SBATCH -G A100:4
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:A100:4
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH -c 32
@@ -21,8 +21,8 @@ VLLM_NODE=${NODELIST[1]}
 echo "Train node: $TRAIN_NODE"
 echo "vLLM node:  $VLLM_NODE"
 
-# Launch vLLM server on node 2
-srun --nodes=1 --ntasks=1 -G A100:4 --nodelist=${VLLM_NODE} \
+# Launch vLLM server on node 2 (inherits GPUs from allocation)
+srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
     nvidia-smi; \
     vllm serve Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000 --tensor-parallel-size 4 --gpu-memory-utilization 0.9 \
@@ -30,8 +30,8 @@ srun --nodes=1 --ntasks=1 -G A100:4 --nodelist=${VLLM_NODE} \
 
 sleep 30
 
-# Launch GRPO trainer on node 1 pointing to vLLM server
-srun --nodes=1 --ntasks=1 -G A100:4 --nodelist=${TRAIN_NODE} \
+# Launch GRPO trainer on node 1 pointing to vLLM server (inherits GPUs from allocation)
+srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
   bash -lc "\
     nvidia-smi; \
     accelerate launch --config_file fsdp.config \
