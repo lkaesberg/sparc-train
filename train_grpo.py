@@ -11,7 +11,7 @@ from accelerate import PartialState  # Add for multi-GPU support
 import re
 from transformers import TrainerCallback
 
-model_name = "Qwen/Qwen3-8B"
+model_name = "Qwen/Qwen3-4B"
 
 # Multi-GPU device setup - get this early to check if we're main process
 device_string = PartialState().process_index
