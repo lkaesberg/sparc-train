@@ -26,11 +26,10 @@ srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
     nvidia-smi; \
     source activate vllm; \
-    python -u -m vllm.entrypoints.openai.api_server \
+    trl vllm-serve \
       --model Qwen/Qwen3-0.6B \
       --host 0.0.0.0 --port 8000 \
-      --tensor-parallel-size 4 \
-      --gpu-memory-utilization 0.9 \
+      --tensor_parallel_size 4 \
   " &
 
 sleep 30
