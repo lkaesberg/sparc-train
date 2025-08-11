@@ -133,7 +133,7 @@ def main():
         vllm_mode="server",
         vllm_server_host=args.vllm_server_host,
         gradient_checkpointing=True,
-        max_completion_length=30000, 
+        max_completion_length=10000, 
         max_prompt_length=5000,
     )
 
