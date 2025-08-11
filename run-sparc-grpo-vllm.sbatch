@@ -24,6 +24,8 @@ echo "vLLM node:  $VLLM_NODE"
 # Launch vLLM server on node 2 (inherits GPUs from allocation)
 srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
+    module load gcc/13.2.0; \
+    module load cuda/12.6.2; \
     nvidia-smi; \
     source activate vllm; \
     trl vllm-serve \
@@ -37,6 +39,8 @@ sleep 30
 # Launch GRPO trainer on node 1 pointing to vLLM server (inherits GPUs from allocation)
 srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
   bash -lc "\
+    module load gcc/13.2.0; \
+    module load cuda/12.6.2; \
     nvidia-smi; \
     source activate vllm; \
     python -m accelerate.commands.launch --config_file fsdp.config \
