@@ -125,14 +125,14 @@ def main():
     config = GRPOConfig(
         output_dir="./grpo_outputs",
         report_to="wandb",
-        per_device_train_batch_size=1,
-        do_eval=False,
+        per_device_train_batch_size=4,
         bf16=True,
         logging_steps=10,
         save_strategy="no",
         use_vllm=True,
         vllm_mode="server",
         vllm_server_host=args.vllm_server_host,
+        gradient_checkpointing=True,
     )
 
     trainer = GRPOTrainer(
