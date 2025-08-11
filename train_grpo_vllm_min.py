@@ -10,71 +10,161 @@ from sparc.prompt import generate_prompt
 from sparc.validation import extract_solution_path, validate_solution, analyze_path
 
 
-def build_sparc_reward(original_examples: List[Dict[str, Any]]):
+def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
+    """Builds a list of reward functions, one per reward component.
+
+    Returns a list[callable], each taking (completions, prompts, **kwargs) -> list[float].
+    """
     prompt_to_puzzle: Dict[str, Dict[str, Any]] = {}
-    for ex in original_examples:
-        prompt_text = generate_prompt(ex)
-        prompt_to_puzzle[prompt_text] = ex
+    for example in original_examples:
+        prompt_text = generate_prompt(example)
+        prompt_to_puzzle[prompt_text] = example
 
     is_main = PartialState().is_main_process
 
-    def reward_func(completions, prompts, **kwargs):
-        rewards: List[float] = []
+    def _normalize_texts(completion, prompt):
+        if isinstance(prompt, list) and len(prompt) > 0 and isinstance(prompt[0], dict):
+            prompt_text_local = prompt[0].get("content", str(prompt))
+        else:
+            prompt_text_local = str(prompt)
 
-        for i, (completion, prompt) in enumerate(zip(completions, prompts)):
-            # Normalize prompt/completion formats (chat vs str)
-            if isinstance(prompt, list) and len(prompt) > 0 and isinstance(prompt[0], dict):
-                prompt_text = prompt[0].get("content", str(prompt))
-            else:
-                prompt_text = str(prompt)
+        if isinstance(completion, list) and len(completion) > 0 and isinstance(completion[0], dict):
+            completion_text_local = completion[0].get("content", str(completion))
+        else:
+            completion_text_local = str(completion)
 
-            if isinstance(completion, list) and len(completion) > 0 and isinstance(completion[0], dict):
-                completion_text = completion[0].get("content", str(completion))
-            else:
-                completion_text = str(completion)
+        return prompt_text_local, completion_text_local
 
+    # 1) Perfect solution reward (1.0 if fully correct, else 0.0)
+    def reward_perfect_solution(completions, prompts, **kwargs):
+        rewards_local: List[float] = []
+        for completion, prompt in zip(completions, prompts):
+            prompt_text, completion_text = _normalize_texts(completion, prompt)
             puzzle = prompt_to_puzzle.get(prompt_text)
-            reward_val = 0.0
-
+            if puzzle is None:
+                rewards_local.append(0.0)
+                continue
             try:
-                if puzzle is None:
-                    # Fallback light format reward
-                    reward_val = 0.2 if ("####" in completion_text and "(" in completion_text and ")" in completion_text) else 0.0
+                extracted_path = extract_solution_path(completion_text, puzzle)
+                if extracted_path is not None and validate_solution(extracted_path, puzzle):
+                    rewards_local.append(1.0)
                 else:
-                    extracted_path = extract_solution_path(completion_text, puzzle)
-                    if extracted_path is not None:
-                        if validate_solution(extracted_path, puzzle):
-                            reward_val = 1.0
-                        else:
-                            analysis = analyze_path(extracted_path, puzzle)
-                            reward_val = 0.0
-                            if analysis.get("starts_at_start_ends_at_exit", False):
-                                reward_val += 0.25
-                            if analysis.get("connected_line", False):
-                                reward_val += 0.25
-                            if analysis.get("non_intersecting_line", False):
-                                reward_val += 0.25
-                            if analysis.get("no_rule_crossing", False):
-                                reward_val += 0.25
-                    else:
-                        reward_val = 0.1 if ("####" in completion_text and "(" in completion_text and ")" in completion_text) else 0.0
+                    rewards_local.append(0.0)
             except Exception:
-                reward_val = 0.0
+                rewards_local.append(0.0)
+        if is_main and len(rewards_local) > 0 and wandb.run is not None:
+            wandb.log({"rewards/perfect_mean": sum(rewards_local) / len(rewards_local)})
+        return rewards_local
 
-            rewards.append(float(reward_val))
+    # Helper to compute analysis dict safely
+    def _extract_path(completion_text: str, puzzle: Dict[str, Any]):
+        try:
+            return extract_solution_path(completion_text, puzzle)
+        except Exception:
+            return None
 
-        # Log per-sample rewards minimally on main process
-        if is_main and len(rewards) > 0 and wandb.run is not None:
-            table = wandb.Table(columns=["idx", "reward"], data=[[i, r] for i, r in enumerate(rewards)])
-            wandb.log({
-                "rewards/single_hist": wandb.Histogram(rewards),
-                "rewards/single_table": table,
-                "rewards/mean": sum(rewards) / len(rewards),
-            })
+    def _is_perfect(completion_text: str, puzzle: Dict[str, Any]) -> bool:
+        try:
+            extracted_path = extract_solution_path(completion_text, puzzle)
+            return bool(extracted_path is not None and validate_solution(extracted_path, puzzle))
+        except Exception:
+            return False
 
-        return rewards
+    def _safe_analysis(completion_text: str, puzzle: Dict[str, Any]):
+        try:
+            extracted_path = extract_solution_path(completion_text, puzzle)
+            if extracted_path is None:
+                return None
+            return analyze_path(extracted_path, puzzle)
+        except Exception:
+            return None
 
-    return reward_func
+    # 2) Starts at start and ends at exit (0.25)
+    def reward_starts_and_ends(completions, prompts, **kwargs):
+        rewards_local: List[float] = []
+        for completion, prompt in zip(completions, prompts):
+            prompt_text, completion_text = _normalize_texts(completion, prompt)
+            puzzle = prompt_to_puzzle.get(prompt_text)
+            if puzzle is None:
+                rewards_local.append(0.0)
+                continue
+            if _is_perfect(completion_text, puzzle):
+                rewards_local.append(0.0)
+            else:
+                analysis = _safe_analysis(completion_text, puzzle)
+                rewards_local.append(0.25 if analysis and analysis.get("starts_at_start_ends_at_exit", False) else 0.0)
+        return rewards_local
+
+    # 3) Connected line (0.25)
+    def reward_connected_line(completions, prompts, **kwargs):
+        rewards_local: List[float] = []
+        for completion, prompt in zip(completions, prompts):
+            prompt_text, completion_text = _normalize_texts(completion, prompt)
+            puzzle = prompt_to_puzzle.get(prompt_text)
+            if puzzle is None:
+                rewards_local.append(0.0)
+                continue
+            if _is_perfect(completion_text, puzzle):
+                rewards_local.append(0.0)
+            else:
+                analysis = _safe_analysis(completion_text, puzzle)
+                rewards_local.append(0.25 if analysis and analysis.get("connected_line", False) else 0.0)
+        return rewards_local
+
+    # 4) Non-intersecting line (0.25)
+    def reward_non_intersecting(completions, prompts, **kwargs):
+        rewards_local: List[float] = []
+        for completion, prompt in zip(completions, prompts):
+            prompt_text, completion_text = _normalize_texts(completion, prompt)
+            puzzle = prompt_to_puzzle.get(prompt_text)
+            if puzzle is None:
+                rewards_local.append(0.0)
+                continue
+            if _is_perfect(completion_text, puzzle):
+                rewards_local.append(0.0)
+            else:
+                analysis = _safe_analysis(completion_text, puzzle)
+                rewards_local.append(0.25 if analysis and analysis.get("non_intersecting_line", False) else 0.0)
+        return rewards_local
+
+    # 5) No rule crossing (0.25)
+    def reward_no_rule_crossing(completions, prompts, **kwargs):
+        rewards_local: List[float] = []
+        for completion, prompt in zip(completions, prompts):
+            prompt_text, completion_text = _normalize_texts(completion, prompt)
+            puzzle = prompt_to_puzzle.get(prompt_text)
+            if puzzle is None:
+                rewards_local.append(0.0)
+                continue
+            if _is_perfect(completion_text, puzzle):
+                rewards_local.append(0.0)
+            else:
+                analysis = _safe_analysis(completion_text, puzzle)
+                rewards_local.append(0.25 if analysis and analysis.get("no_rule_crossing", False) else 0.0)
+        return rewards_local
+
+    # 6) Format hint reward (small reward for emitting expected format when path not valid)
+    def reward_format_hint(completions, prompts, **kwargs):
+        rewards_local: List[float] = []
+        for completion, prompt in zip(completions, prompts):
+            prompt_text, completion_text = _normalize_texts(completion, prompt)
+            puzzle = prompt_to_puzzle.get(prompt_text)
+            if puzzle is not None and _is_perfect(completion_text, puzzle):
+                rewards_local.append(0.0)
+                continue
+            has_format = ("####" in completion_text and "(" in completion_text and ")" in completion_text)
+            rewards_local.append(0.1 if has_format else 0.0)
+        return rewards_local
+
+    # Return all reward functions as a list
+    return [
+        reward_perfect_solution,
+        reward_starts_and_ends,
+        reward_connected_line,
+        reward_non_intersecting,
+        reward_no_rule_crossing,
+        reward_format_hint,
+    ]
 
 
 def to_grpo_prompt_format(dataset: Dataset) -> Dataset:
@@ -117,9 +207,9 @@ def main():
     train_ds = to_grpo_prompt_format(train_raw)
     eval_ds = to_grpo_prompt_format(eval_raw)
 
-    # Build reward function with access to original examples
+    # Build reward functions with access to original examples
     combined_examples: List[Dict[str, Any]] = list(train_raw) + list(eval_raw)
-    reward = build_sparc_reward(combined_examples)
+    rewards = build_sparc_reward_functions(combined_examples)
 
     # Minimal GRPO config per docs; vLLM in server mode
     config = GRPOConfig(
@@ -141,7 +231,7 @@ def main():
     trainer = GRPOTrainer(
         model=args.model,
         args=config,
-        reward_funcs=reward,
+        reward_funcs=rewards,
         train_dataset=train_ds,
         eval_dataset=None,
     )
