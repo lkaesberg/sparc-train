@@ -36,16 +36,20 @@ srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
 
 sleep 30
 
-# Launch GRPO trainer on node 1 pointing to vLLM server (inherits GPUs from allocation)
+# Launch GRPO trainer on node 1 pointing to vLLM server (single GPU to avoid FSDP issues)
 srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
   bash -lc "\
     module load gcc/13.2.0; \
     module load cuda/12.6.2; \
     nvidia-smi; \
     source activate vllm; \
-    python -m accelerate.commands.launch --config_file fsdp.config \
-      train_grpo_vllm_min.py --model Qwen/Qwen3-0.6B --vllm_server_host ${VLLM_NODE} \
-      --wandb_project sparc-grpo --wandb_entity larskaesberg-university-of-g-ttingen \
+    accelerate launch \
+        --multi_gpu \
+        --num_machines 1 \
+        --num_processes 4 \
+        train_grpo_vllm_min.py \
+        --model Qwen/Qwen3-0.6B --vllm_server_host ${VLLM_NODE} \
+        --wandb_project sparc-grpo --wandb_entity larskaesberg-university-of-g-ttingen \
   "
 
 wait
