@@ -125,7 +125,7 @@ def main():
     config = GRPOConfig(
         output_dir="./grpo_outputs",
         report_to="wandb",
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=1,
         bf16=True,
         logging_steps=10,
         save_strategy="no",
@@ -135,6 +135,7 @@ def main():
         gradient_checkpointing=True,
         max_completion_length=10000, 
         max_prompt_length=5000,
+        num_generations=4,
     )
 
     trainer = GRPOTrainer(
