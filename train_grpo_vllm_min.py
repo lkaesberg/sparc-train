@@ -222,7 +222,7 @@ def main():
         save_strategy="no",
         do_eval=True,
         eval_on_start=True,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=200,
         use_vllm=True,
         vllm_mode="server",
