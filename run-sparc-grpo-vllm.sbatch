@@ -51,7 +51,3 @@ srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
         --model Qwen/Qwen3-0.6B --vllm_server_host ${VLLM_NODE} \
         --wandb_project sparc-grpo --wandb_entity larskaesberg-university-of-g-ttingen \
   "
-
-wait
-
-
