@@ -223,7 +223,7 @@ def main():
         do_eval=True,
         eval_on_start=True,
         eval_strategy="steps",
-        eval_steps=200,
+        eval_steps=500,
         use_vllm=True,
         vllm_mode="server",
         vllm_server_host=args.vllm_server_host,
@@ -231,7 +231,7 @@ def main():
         max_completion_length=10000, 
         max_prompt_length=5000,
         num_generations=4,
-        num_train_epochs=6,
+        num_train_epochs=4,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
     )
