@@ -216,9 +216,14 @@ def main():
         output_dir="./grpo_outputs",
         report_to="wandb",
         per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
         bf16=True,
         logging_steps=10,
         save_strategy="no",
+        do_eval=True,
+        eval_on_start=True,
+        evaluation_strategy="steps",
+        eval_steps=200,
         use_vllm=True,
         vllm_mode="server",
         vllm_server_host=args.vllm_server_host,
@@ -226,6 +231,7 @@ def main():
         max_completion_length=10000, 
         max_prompt_length=5000,
         num_generations=4,
+        num_train_epochs=6,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
     )
@@ -235,7 +241,7 @@ def main():
         args=config,
         reward_funcs=rewards,
         train_dataset=train_ds,
-        eval_dataset=None,
+        eval_dataset=eval_ds,
     )
 
     trainer.train()
