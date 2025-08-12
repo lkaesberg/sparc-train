@@ -92,7 +92,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
                 rewards_local.append(0.0)
             else:
                 analysis = _safe_analysis(completion_text, puzzle)
-                rewards_local.append(0.25 if analysis and analysis.get("starts_at_start_ends_at_exit", False) else 0.0)
+                rewards_local.append(1.0 if analysis and analysis.get("starts_at_start_ends_at_exit", False) else 0.0)
         return rewards_local
 
     # 3) Connected line (0.25)
@@ -108,7 +108,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
                 rewards_local.append(0.0)
             else:
                 analysis = _safe_analysis(completion_text, puzzle)
-                rewards_local.append(0.25 if analysis and analysis.get("connected_line", False) else 0.0)
+                rewards_local.append(1.0 if analysis and analysis.get("connected_line", False) else 0.0)
         return rewards_local
 
     # 4) Non-intersecting line (0.25)
@@ -124,7 +124,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
                 rewards_local.append(0.0)
             else:
                 analysis = _safe_analysis(completion_text, puzzle)
-                rewards_local.append(0.25 if analysis and analysis.get("non_intersecting_line", False) else 0.0)
+                rewards_local.append(1.0 if analysis and analysis.get("non_intersecting_line", False) else 0.0)
         return rewards_local
 
     # 5) No rule crossing (0.25)
@@ -140,7 +140,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
                 rewards_local.append(0.0)
             else:
                 analysis = _safe_analysis(completion_text, puzzle)
-                rewards_local.append(0.25 if analysis and analysis.get("no_rule_crossing", False) else 0.0)
+                rewards_local.append(1.0 if analysis and analysis.get("no_rule_crossing", False) else 0.0)
         return rewards_local
 
     # 6) Format hint reward (small reward for emitting expected format when path not valid)
@@ -153,7 +153,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
                 rewards_local.append(0.0)
                 continue
             has_format = ("####" in completion_text and "(" in completion_text and ")" in completion_text)
-            rewards_local.append(0.1 if has_format else 0.0)
+            rewards_local.append(1.0 if has_format else 0.0)
         return rewards_local
 
     # Return all reward functions as a list
@@ -226,6 +226,8 @@ def main():
         max_completion_length=10000, 
         max_prompt_length=5000,
         num_generations=4,
+        # Built-in weighting of multiple reward functions
+        reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
     )
 
     trainer = GRPOTrainer(
