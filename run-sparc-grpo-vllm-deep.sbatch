@@ -3,7 +3,7 @@
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=3
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:A100:4
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH -c 32
