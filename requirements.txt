@@ -11,8 +11,8 @@ wandb>=0.17.0
 
 
 # Optional speedups (uncomment if compatible with your system)
-flash-attn==2.5.7
-
+#flash-attn==2.5.7
+deepspeed
 # Note: Ensure your custom `sparc` package (providing `sparc.prompt` and `sparc.validation`) 
 # is installed or available on PYTHONPATH for training scripts to run.
 sparc-puzzle

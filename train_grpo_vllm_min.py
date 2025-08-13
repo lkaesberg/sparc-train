@@ -24,7 +24,14 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
 
     def _normalize_texts(completion, prompt):
         if isinstance(prompt, list) and len(prompt) > 0 and isinstance(prompt[0], dict):
-            prompt_text_local = prompt[0].get("content", str(prompt))
+            # Prefer the first user message content if present; fallback to first message content
+            try:
+                prompt_text_local = next(
+                    (m.get("content", "") for m in prompt if isinstance(m, dict) and m.get("role") == "user"),
+                    prompt[0].get("content", str(prompt)),
+                )
+            except Exception:
+                prompt_text_local = prompt[0].get("content", str(prompt))
         else:
             prompt_text_local = str(prompt)
 
@@ -170,8 +177,16 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
 def to_grpo_prompt_format(dataset: Dataset) -> Dataset:
     def _map_fn(ex):
         prompt = generate_prompt(ex)
+        system_msg = (
+            "Use <think>...</think> to reason privately. Keep thinking concise. "
+            "After thinking, output ONLY the final SPaRC path in the exact format '####(x0,y0)->(x1,y1)->...'. "
+            "Do not include any extra text outside the final path line."
+        )
         return {
-            "prompt": [{"role": "user", "content": prompt}],
+            "prompt": [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": prompt},
+            ],
             "puzzle_data": ex,
         }
 
