@@ -22,7 +22,7 @@ echo "Train nodes: ${TRAIN_NODES[*]}"
 echo "vLLM node:  ${VLLM_NODE}"
 
 # Launch vLLM server on node 3 as a background step
-srun --job-name=vllm-server --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
+srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
     module load gcc/13.2.0; \
     module load cuda/12.6.2; \
@@ -31,7 +31,7 @@ srun --job-name=vllm-server --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
     trl vllm-serve \
       --model Qwen/Qwen3-0.6B \
       --host 0.0.0.0 --port 8000 \
-      --tensor_parallel_size 8 \
+      --tensor_parallel_size 4 \
   " &
 
 # Give the server time to start
