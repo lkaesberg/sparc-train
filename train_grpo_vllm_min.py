@@ -199,13 +199,14 @@ def main():
     parser.add_argument("--vllm_server_host", type=str, required=True, help="Hostname or IP of the vLLM server (port 8000)")
     parser.add_argument("--wandb_project", type=str, default="sparc-grpo")
     parser.add_argument("--wandb_entity", type=str, default=None)
+    parser.add_argument("--wandb_run_id", type=str, default=None, help="Optional W&B run id to resume")
     args = parser.parse_args()
 
     state = PartialState()
     is_main = state.is_main_process
 
     if is_main:
-        wandb.init(project=args.wandb_project, entity=args.wandb_entity, config={
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, resume="allow" if args.wandb_run_id else None, config={
             "model": args.model,
             "dataset": "lkaesberg/SPaRC",
             "trainer": "GRPO",
@@ -228,13 +229,15 @@ def main():
 
     # Minimal GRPO config per docs; vLLM in server mode
     config = GRPOConfig(
-        output_dir="./grpo_outputs",
+        output_dir=f"./grpo_outputs_{args.model.replace('/', '_')}",
         report_to="wandb",
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         bf16=True,
         logging_steps=10,
-        save_strategy="no",
+        save_strategy="steps",
+        save_steps=500,          # or whatever you want
+        save_total_limit=2,      # optional: keep disk usage sane
         do_eval=True,
         eval_on_start=True,
         eval_strategy="steps",
@@ -259,10 +262,10 @@ def main():
         eval_dataset=eval_ds,
     )
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=True)
 
     if is_main:
-        trainer.save_model("./final_grpo_model")
+        trainer.save_model(f"./final_grpo_model_{args.model.replace('/', '_')}")
         wandb.finish()
 
 
