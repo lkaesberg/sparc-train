@@ -1,4 +1,5 @@
 import argparse
+import os
 from typing import List, Any, Dict
 
 import wandb
@@ -262,7 +263,8 @@ def main():
         eval_dataset=eval_ds,
     )
 
-    trainer.train(resume_from_checkpoint=True)
+    # Resume only if a run id was provided
+    trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
     if is_main:
         trainer.save_model(f"./final_grpo_model_{args.model.replace('/', '_')}")
