@@ -21,6 +21,10 @@ VLLM_NODE=${NODELIST[1]}
 echo "Train node: $TRAIN_NODE"
 echo "vLLM node:  $VLLM_NODE"
 
+# Central model selection (override by exporting MODEL_NAME before sbatch)
+MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
+echo "Model: ${MODEL_NAME}"
+
 # Launch vLLM server on node 2 (inherits GPUs from allocation)
 srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
@@ -29,7 +33,7 @@ srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
     nvidia-smi; \
     source activate vllm; \
     trl vllm-serve \
-      --model Qwen/Qwen3-0.6B \
+      --model "${MODEL_NAME}" \
       --host 0.0.0.0 --port 8000 \
       --tensor_parallel_size 4 \
   " &
@@ -48,6 +52,6 @@ srun --nodes=1 --ntasks=1 --nodelist=${TRAIN_NODE} \
         --num_machines 1 \
         --num_processes 4 \
         train_grpo_vllm_min.py \
-        --model Qwen/Qwen3-0.6B --vllm_server_host ${VLLM_NODE} \
+        --model "${MODEL_NAME}" --vllm_server_host ${VLLM_NODE} \
         --wandb_project sparc-grpo --wandb_entity larskaesberg-university-of-g-ttingen \
   "
