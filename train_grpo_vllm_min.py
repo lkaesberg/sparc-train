@@ -267,7 +267,7 @@ def main():
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
     if is_main:
-        trainer.save_model(f"./final_grpo_model_{args.model.replace('/', '_')}")
+        trainer.save_model(f".checkpoints/final_grpo_model_{args.model.replace('/', '_')}")
         wandb.finish()
 
 
