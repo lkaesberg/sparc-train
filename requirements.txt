@@ -1,17 +1,17 @@
 # Core libraries
 torch
 torchvision
-transformers>=4.41.0
-datasets>=2.19.0
-accelerate>=0.30.0
+transformers
+datasets
+accelerate
 trl
-trl[vllm]>=0.9.4
-vllm>=0.4.0.post1
-wandb>=0.17.0
+trl[vllm]
+vllm
+wandb
 
 
 # Optional speedups (uncomment if compatible with your system)
-#flash-attn==2.5.7
+flash-attn
 deepspeed
 # Note: Ensure your custom `sparc` package (providing `sparc.prompt` and `sparc.validation`) 
 # is installed or available on PYTHONPATH for training scripts to run.
