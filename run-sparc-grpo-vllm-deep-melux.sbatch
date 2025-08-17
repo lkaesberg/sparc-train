@@ -9,6 +9,7 @@
 
 module load Python/3.12.3-GCCcore-13.3.0
 module load CUDA/12.6.0
+module load NCCL/2.22.3-GCCcore-13.3.0-CUDA-12.6.0
 
 source sparc/bin/activate
 
@@ -29,6 +30,7 @@ srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
   bash -lc "\
     module load Python/3.12.3-GCCcore-13.3.0; \
     module load CUDA/12.6.0; \
+    module load NCCL/2.22.3-GCCcore-13.3.0-CUDA-12.6.0; \
     nvidia-smi; \
     source sparc/bin/activate; \
     trl vllm-serve \
@@ -45,6 +47,7 @@ srun --nodes=2 --ntasks=2 --nodelist="${TRAIN_NODES[*]}" \
   bash -lc "\
     module load Python/3.12.3-GCCcore-13.3.0; \
     module load CUDA/12.6.0; \
+    module load NCCL/2.22.3-GCCcore-13.3.0-CUDA-12.6.0; \
     nvidia-smi; \
     source sparc/bin/activate; \
     accelerate launch \
