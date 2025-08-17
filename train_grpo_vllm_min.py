@@ -254,6 +254,9 @@ def main():
         num_train_epochs=4,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
+        load_best_model_at_end=True,
+        metric_for_best_model="eval/rewards/reward_perfect_solution/mean",
+        greater_is_better=True,
     )
 
     trainer = GRPOTrainer(
