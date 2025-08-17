@@ -230,7 +230,7 @@ def main():
 
     # Minimal GRPO config per docs; vLLM in server mode
     config = GRPOConfig(
-        output_dir=f"./grpo_outputs_{args.model.replace('/', '_')}",
+        output_dir=f"./checkpoints/grpo_outputs_{args.model.replace('/', '_')}",
         report_to="wandb",
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
@@ -267,7 +267,7 @@ def main():
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
     if is_main:
-        trainer.save_model(f".checkpoints/final_grpo_model_{args.model.replace('/', '_')}")
+        trainer.save_model(f"./checkpoints/final_grpo_model_{args.model.replace('/', '_')}")
         wandb.finish()
 
 
