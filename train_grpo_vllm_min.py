@@ -246,6 +246,7 @@ def main():
         use_vllm=True,
         vllm_mode="server",
         vllm_server_host=args.vllm_server_host,
+        vllm_server_timeout=3600,
         gradient_checkpointing=True,
         max_completion_length=10000, 
         max_prompt_length=5000,
