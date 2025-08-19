@@ -34,7 +34,7 @@ else:
     print(f"DEBUG: Skipping wandb initialization on worker process (rank {device_string})")
 
 original_dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
-original_eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test")
+original_eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test[:100]")
 
 def expand_dataset_with_individual_solutions(dataset):
     """
