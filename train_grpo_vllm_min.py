@@ -218,7 +218,7 @@ def main():
 
     # Load datasets
     train_raw = load_dataset("lkaesberg/SPaRC", "all", split="train")
-    eval_raw = load_dataset("lkaesberg/SPaRC", "all", split="test")
+    eval_raw = load_dataset("lkaesberg/SPaRC", "all", split="test[:100]")
 
     # Transform to prompt format
     train_ds = to_grpo_prompt_format(train_raw)
