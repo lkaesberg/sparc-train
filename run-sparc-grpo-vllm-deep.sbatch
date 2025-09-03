@@ -2,7 +2,7 @@
 #SBATCH --job-name=sparc-grpo-vllm-2n
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=3
-#SBATCH --ntasks-per-node=1        # will use srun overrides for the multi-proc launch
+#SBATCH --ntasks-per-node=4        # will use srun overrides for the multi-proc launch
 #SBATCH --gres=gpu:A100:4
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
