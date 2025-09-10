@@ -239,8 +239,8 @@ def main():
         save_strategy="steps",
         save_steps=500,          # or whatever you want
         save_total_limit=2,      # optional: keep disk usage sane
-        do_eval=True,
-        eval_on_start=True,
+        do_eval=False,
+        eval_on_start=False,
         eval_strategy="steps",
         eval_steps=500,
         use_vllm=True,
