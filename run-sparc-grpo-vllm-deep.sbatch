@@ -53,7 +53,7 @@ srun --nodes=2 --ntasks=2 --nodelist="${TRAIN_NODES[*]}" \
       --num_processes 8 \
       --num_machines 2 \
       --main_process_ip ${TRAIN_NODES[0]} \
-      --machine_rank \$SLURM_NODEID \
+      --machine_rank $SLURM_PROCID \
       --rdzv_backend c10d \
       train_grpo_vllm_min.py \
         --model \"${MODEL_NAME}\" \
