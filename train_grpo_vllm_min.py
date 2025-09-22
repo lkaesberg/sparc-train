@@ -236,13 +236,8 @@ def main():
         per_device_eval_batch_size=1,
         bf16=True,
         logging_steps=10,
-        save_strategy="steps",
-        save_steps=500,          # or whatever you want
-        save_total_limit=2,      # optional: keep disk usage sane
-        do_eval=True,
-        eval_on_start=True,
-        eval_strategy="steps",
-        eval_steps=500,
+        save_strategy="no",
+        do_eval=False,
         use_vllm=True,
         vllm_mode="server",
         vllm_server_host=args.vllm_server_host,
