@@ -4,7 +4,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH --nodes=3
-#SBATCH --ntasks-per-node=4     # 4 tasks per train node
+#SBATCH --ntasks-per-node=1   
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 8                    # ~8 CPUs per task is common
 
@@ -22,7 +22,7 @@ echo "Train nodes: ${TRAIN_NODES[*]}"
 echo "vLLM node:  ${VLLM_NODE}"
 
 # Central model selection (override by exporting MODEL_NAME before sbatch)
-MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
+MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-4B}
 echo "Model: ${MODEL_NAME}"
 
 # Launch vLLM server on node 3 as a background step
@@ -42,7 +42,7 @@ srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
 sleep 30
 
 # Start distributed training across the 2 train nodes (16 total procs if 8 GPUs per node)
-srun --nodes=2 --ntasks-per-node=4 --nodelist="${TRAIN_NODES[*]}" \
+srun --nodes=2 --ntasks=2 --nodelist="${TRAIN_NODES[*]}" \
   bash -lc "\
     module load gcc/13.2.0; \
     module load cuda/12.6.2; \
