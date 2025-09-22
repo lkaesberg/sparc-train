@@ -26,23 +26,7 @@ MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
 echo "Model: ${MODEL_NAME}"
 
 # Launch vLLM server on node 3 as a background step
-srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
-  bash -lc "\
-    module load gcc/13.2.0; \
-    module load cuda/12.6.2; \
-    nvidia-smi; \
-    source activate vllm; \
-    trl vllm-serve \
-      --model "${MODEL_NAME}" \
-      --host 0.0.0.0 --port 8000 \
-      --tensor_parallel_size 4 \
-  " &
-
-# Give the server time to start
-sleep 30
-
-# Start distributed training across the 2 train nodes (16 total procs if 8 GPUs per node)
-srun --nodes=2 --ntasks=2 --nodelist="${TRAIN_NODES[*]}" \
+srun --nodes=2 --ntasks-per-node=4 --nodelist="${TRAIN_NODES[*]}" \
   bash -lc "\
     module load gcc/13.2.0; \
     module load cuda/12.6.2; \
@@ -53,10 +37,10 @@ srun --nodes=2 --ntasks=2 --nodelist="${TRAIN_NODES[*]}" \
       --num_processes 8 \
       --num_machines 2 \
       --main_process_ip ${TRAIN_NODES[0]} \
-      --machine_rank $SLURM_PROCID \
+      --machine_rank \$SLURM_NODEID \
       --rdzv_backend c10d \
       train_grpo_vllm_min.py \
-        --model "${MODEL_NAME}" \
+        --model \"${MODEL_NAME}\" \
         --vllm_server_host ${VLLM_NODE} \
         --wandb_project sparc-grpo \
   "
