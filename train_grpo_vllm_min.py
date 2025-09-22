@@ -213,8 +213,9 @@ def main():
             "trainer": "GRPO",
             "use_vllm": True,
             "vllm_mode": "server",
-            "vllm_server_host": args.vllm_server_host,
-        })
+            "vllm_server_host": args.vllm_server_host},
+            settings=wandb.Settings(init_timeout=3600)
+        )
 
     # Load datasets
     train_raw = load_dataset("lkaesberg/SPaRC", "all", split="train")
