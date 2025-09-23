@@ -22,7 +22,7 @@ echo "Train nodes: ${TRAIN_NODES[*]}"
 echo "vLLM node:  ${VLLM_NODE}"
 
 # Central model selection (override by exporting MODEL_NAME before sbatch)
-MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-4B}
+MODEL_NAME=${MODEL_NAME:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/models/Qwen3-4B}
 echo "Model: ${MODEL_NAME}"
 
 # Launch vLLM server on node 3 as a background step
