@@ -248,6 +248,7 @@ def main():
         max_prompt_length=5000,
         num_generations=4,
         num_train_epochs=4,
+        max_steps=100,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
         scale_rewards=False,
@@ -259,7 +260,7 @@ def main():
         args=config,
         reward_funcs=rewards,
         train_dataset=train_ds,
-        eval_dataset=eval_ds,
+        #eval_dataset=eval_ds,
     )
 
     # Resume only if a run id was provided
