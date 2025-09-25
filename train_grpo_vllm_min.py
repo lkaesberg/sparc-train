@@ -267,8 +267,10 @@ def main():
     # Resume only if a run id was provided
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
+    trainer.deepspeed.save_checkpoint(f"./checkpoint_grpo")
+    dist.barrier()
+
     if dist.get_rank() == 0:
-        trainer.deepspeed.save_checkpoint(f"./checkpoint_grpo")
         trainer.save_model(f"./model_grpo")
     
     dist.barrier()
