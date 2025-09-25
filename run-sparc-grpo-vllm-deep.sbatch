@@ -6,7 +6,7 @@
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1   
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
-#SBATCH -c 8                    # ~8 CPUs per task is common
+#SBATCH -c 32
 #SBATCH -C inet
 
 module load gcc/13.2.0
