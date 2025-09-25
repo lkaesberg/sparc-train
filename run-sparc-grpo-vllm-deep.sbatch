@@ -83,6 +83,8 @@ srun --nodes=${NUM_MACHINES} --ntasks=${NUM_MACHINES} --nodelist="${TRAIN_NODES[
     module load cuda/12.6.2; \
     nvidia-smi; \
     source activate vllm; \
+    DEEPSPEED_LOG_LEVEL=debug NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=COLL,INIT \
+    TORCH_DISTRIBUTED_DEBUG=DETAIL \
     accelerate launch \
       --config_file deepspeed_zero3.yaml \
       --num_processes ${NUM_PROCESSES} \
