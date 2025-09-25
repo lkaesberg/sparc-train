@@ -3,7 +3,7 @@
 #SBATCH --partition=scc-gpu
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
-#SBATCH --nodes=3
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1   
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 8                    # ~8 CPUs per task is common
@@ -57,7 +57,7 @@ echo "vLLM node:  ${VLLM_NODE}"
 echo "GPUs per node: ${GPUS_PER_NODE} | Processes: ${NUM_PROCESSES} | TP size: ${VLLM_TP_SIZE}"
 
 # Central model selection (override by exporting MODEL_NAME before sbatch)
-MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-4B}
+MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
 echo "Model: ${MODEL_NAME}"
 
 # Launch vLLM server on the dedicated node as a background step
