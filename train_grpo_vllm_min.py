@@ -1,6 +1,7 @@
 import argparse
 import os
 from typing import List, Any, Dict
+import torch.distributed as dist
 
 import wandb
 from accelerate import PartialState
@@ -203,10 +204,7 @@ def main():
     parser.add_argument("--wandb_run_id", type=str, default=None, help="Optional W&B run id to resume")
     args = parser.parse_args()
 
-    state = PartialState()
-    is_main = state.is_main_process
-
-    if is_main:
+    if dist.get_rank() == 0:
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, resume="allow" if args.wandb_run_id else None, config={
             "model": args.model,
             "dataset": "lkaesberg/SPaRC",
@@ -216,7 +214,7 @@ def main():
             "vllm_server_host": args.vllm_server_host},
             settings=wandb.Settings(init_timeout=3600)
         )
-
+    
     # Load datasets
     train_raw = load_dataset("lkaesberg/SPaRC", "all", split="train")
     eval_raw = load_dataset("lkaesberg/SPaRC", "all", split="test[:100]")
@@ -266,8 +264,11 @@ def main():
     # Resume only if a run id was provided
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
-    if is_main:
+    if dist.get_rank() == 0:
+        trainer.deepspeed.save_checkpoint(f"./checkpoints/final_grpo_model_checkpoint_{args.model.replace('/', '_')}")
         trainer.save_model(f"./checkpoints/final_grpo_model_{args.model.replace('/', '_')}")
+    dist.barrier()
+    if dist.get_rank() == 0:
         wandb.finish()
 
 
