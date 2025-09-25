@@ -268,8 +268,8 @@ def main():
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
     if dist.get_rank() == 0:
-        trainer.deepspeed.save_checkpoint(f"./checkpoints/final_grpo_model_checkpoint_{args.model.replace('/', '_')}")
-        trainer.save_model(f"./checkpoints/final_grpo_model_{args.model.replace('/', '_')}")
+        trainer.deepspeed.save_checkpoint(f"./checkpoint_grpo")
+        trainer.save_model(f"./model_grpo")
     
     dist.barrier()
 
