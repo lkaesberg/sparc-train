@@ -249,7 +249,6 @@ def main():
         max_prompt_length=5000,
         num_generations=4,
         num_train_epochs=4,
-        max_steps=20,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
         scale_rewards=False,
