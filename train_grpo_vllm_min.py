@@ -266,7 +266,7 @@ def main():
     # Resume only if a run id was provided
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
-    trainer.save_model(f"./models/SPaRC_GRPO_{args.model.split('/')[-1]}")
+    trainer.save_model(f"./models/{args.model.split('/')[-1]}_SPaRC_GRPO")
 
     if is_main:
         wandb.finish()
