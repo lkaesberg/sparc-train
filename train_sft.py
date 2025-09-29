@@ -16,9 +16,10 @@ from transformers import TrainerCallback
 
 model_name = os.environ.get("MODEL_NAME", "Qwen/Qwen3-8B")
 
-# Multi-GPU device setup - get this early to check if we're main process
-device_string = PartialState().process_index
-is_main_process = PartialState().is_main_process
+# Multi-GPU device setup - initialize a single PartialState and reuse it
+state = PartialState()
+device_string = state.process_index
+is_main_process = state.is_main_process
 
 # Initialize wandb only on main process
 if is_main_process:
