@@ -19,8 +19,7 @@ nvidia-smi
 export MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
 
 accelerate launch \
-    --use_deepspeed \
-    --deepspeed_config_file deepspeed_zero3.yaml \
+    --config_file deepspeed_zero3.yaml \
     --num_processes 4 \
     --num_machines 1 \
     train_sft.py
