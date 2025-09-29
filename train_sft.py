@@ -486,11 +486,13 @@ trainer.train()
 if is_main_process:
     print("DEBUG: Training completed. Saving final model...")
     
-    # Save the final model in standard format
-    final_model_dir = f"./models/{model_name.split('/')[-1]}-SPaRC-SFT"
-    trainer.save_model(final_model_dir)
-    
+# Save the final model in standard format
+final_model_dir = f"./models/{model_name.split('/')[-1]}-SPaRC-SFT"
+trainer.save_model(final_model_dir)
+
+if is_main_process:
     print(f"DEBUG: Final model saved to {final_model_dir}")
+    wandb.finish()
 
 # Clean up memory after training
 if is_main_process:
