@@ -99,7 +99,6 @@ training_args = SFTConfig(
 # Multi-GPU device setup
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    device_map={'': device_string},  # Proper device placement for multi-GPU
     attn_implementation="flash_attention_2",
     torch_dtype=torch.bfloat16,  # Fix Flash Attention warning by specifying dtype
 )
