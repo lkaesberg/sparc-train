@@ -13,6 +13,13 @@ module load cuda/12.6.2
 
 source activate sparc
 nvidia-smi
+
+# Set model name here; can be overridden per-submission with: sbatch --export=ALL,MODEL_NAME=Your/Model run-sparc-multi.sbatch
+export MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
+
 accelerate launch \
-    --config_file fsdp.config \
+    --use_deepspeed \
+    --deepspeed_config_file deepspeed_zero3.yaml \
+    --num_processes 4 \
+    --num_machines 1 \
     train_sft.py

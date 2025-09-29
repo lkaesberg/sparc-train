@@ -1,6 +1,7 @@
 import torch
 import gc
 import numpy as np
+import os
 from datasets import load_dataset
 from trl import SFTConfig, SFTTrainer, setup_chat_format
 from sparc.prompt import generate_prompt
@@ -13,7 +14,7 @@ from transformers import TrainerCallback
 
 
 
-model_name = "Qwen/Qwen3-8B"
+model_name = os.environ.get("MODEL_NAME", "Qwen/Qwen3-8B")
 
 # Multi-GPU device setup - get this early to check if we're main process
 device_string = PartialState().process_index
@@ -39,63 +40,9 @@ else:
 dataset = load_dataset("lkaesberg/SPaRC", "all", split="train")
 eval_dataset = load_dataset("lkaesberg/SPaRC", "all", split="test")
 
-def expand_dataset_with_individual_solutions(dataset):
-    """
-    Expand dataset so each puzzle appears once per solution.
-    Instead of: 1 puzzle with 3 solutions
-    Creates: 3 samples, each with the same puzzle but 1 unique solution
-    
-    BENEFITS FOR TRAINING:
-    - Model sees each valid solution path as a separate training example
-    - Learns multiple valid approaches to the same puzzle
-    - Better pattern recognition for different solution strategies
-    - Increased training data diversity without collecting new puzzles
-    - More focused learning: each sample has exactly one target solution
-    """
-    expanded_samples = []
-    original_count = len(dataset)
-    total_solutions = 0
-    
-    for sample in dataset:
-        puzzle_data = sample.copy()
-        solutions = puzzle_data.get('solutions', [])
-        
-        if len(solutions) == 0:
-            # Keep samples with no solutions as-is
-            expanded_samples.append(puzzle_data)
-            continue
-        
-        total_solutions += len(solutions)
-        
-        # Create one sample per solution
-        for solution in solutions:
-            new_sample = puzzle_data.copy()
-            # Replace the solutions array with just this one solution
-            new_sample['solutions'] = [solution]
-            expanded_samples.append(new_sample)
-    
-    # Convert back to HuggingFace dataset format
-    from datasets import Dataset
-    
-    if is_main_process:
-        print(f"DEBUG: Dataset expansion - {original_count} puzzles with {total_solutions} total solutions")
-        print(f"DEBUG: Average solutions per puzzle: {total_solutions/original_count:.2f}")
-    
-    return Dataset.from_list(expanded_samples)
-
-
-
-# Expand both training and evaluation datasets
-if is_main_process:
-    print(f"DEBUG: Original train dataset size: {len(dataset)}")
-    print(f"DEBUG: Original eval dataset size: {len(eval_dataset)}")
-
-# dataset = expand_dataset_with_individual_solutions(dataset)
 
 if is_main_process:
     print(f"DEBUG: Expanded train dataset size: {len(dataset)}")
-
-
 
 training_args = SFTConfig(
     output_dir="./tmp",
@@ -541,11 +488,8 @@ if is_main_process:
     print("DEBUG: Training completed. Saving final model...")
     
     # Save the final model in standard format
-    final_model_dir = "./final_model"
+    final_model_dir = f"./models/{model_name.split('/')[-1]}-SPaRC-SFT"
     trainer.save_model(final_model_dir)
-    
-    # Also save the tokenizer
-    tokenizer.save_pretrained(final_model_dir)
     
     print(f"DEBUG: Final model saved to {final_model_dir}")
 
