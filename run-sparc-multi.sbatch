@@ -7,6 +7,7 @@
 #SBATCH --time=48:00:00 
 #SBATCH --mem=256G
 #SBATCH -c 32
+#SBATCH -C inet
 
 module load gcc/13.2.0
 module load cuda/12.6.2
