@@ -8,8 +8,8 @@
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 32
 #SBATCH -C inet
-#SBATCH --output=logs_grpo/%x_%j.out
-#SBATCH --error=logs_grpo/%x_%j.err
+#SBATCH --output=logs_grpo/%x_%j.log
+#SBATCH --error=logs_grpo/%x_%j.log
 
 module load gcc/13.2.0
 module load cuda/12.6.2

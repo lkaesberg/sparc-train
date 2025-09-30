@@ -8,8 +8,8 @@
 #SBATCH --mem=256G
 #SBATCH -c 32
 #SBATCH -C inet
-#SBATCH --output=logs_sft/%x_%j.out
-#SBATCH --error=logs_sft/%x_%j.err
+#SBATCH --output=logs_sft/%x_%j.log
+#SBATCH --error=logs_sft/%x_%j.log
 
 module load gcc/13.2.0
 module load cuda/12.6.2
