@@ -248,7 +248,7 @@ def main():
         gradient_checkpointing=True,
         max_completion_length=10000, 
         max_prompt_length=5000,
-        num_generations=16,
+        num_generations=4,
         num_train_epochs=4,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
