@@ -234,9 +234,9 @@ def main():
     config = GRPOConfig(
         output_dir=f"./checkpoints/grpo_outputs_{args.model.replace('/', '_')}",
         report_to="wandb",
-        per_device_train_batch_size=1,
+        per_device_train_batch_size=2,
         per_device_eval_batch_size=1,
-        gradient_accumulation_steps=1,
+        gradient_accumulation_steps=2,
         bf16=True,
         logging_steps=10,
         save_strategy="no",
@@ -248,7 +248,7 @@ def main():
         gradient_checkpointing=True,
         max_completion_length=10000, 
         max_prompt_length=5000,
-        num_generations=4,
+        num_generations=16,
         num_train_epochs=4,
         # Built-in weighting of multiple reward functions
         reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
