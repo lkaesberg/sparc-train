@@ -1,11 +1,14 @@
 import argparse
 import os
 from typing import List, Any, Dict
+import torch
+import torch.distributed as dist
 
 import wandb
 from accelerate import PartialState
 from datasets import load_dataset, Dataset
-from trl import GRPOConfig, GRPOTrainer
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from trl import PPOConfig, PPOTrainer
 
 from sparc.prompt import generate_prompt
 from sparc.validation import extract_solution_path, validate_solution, analyze_path
@@ -175,7 +178,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
     ]
 
 
-def to_grpo_prompt_format(dataset: Dataset) -> Dataset:
+def to_ppo_prompt_format(dataset: Dataset) -> Dataset:
     def _map_fn(ex):
         prompt = generate_prompt(ex)
         system_msg = (
@@ -197,10 +200,14 @@ def to_grpo_prompt_format(dataset: Dataset) -> Dataset:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-0.6B")
-    parser.add_argument("--vllm_server_host", type=str, required=True, help="Hostname or IP of the vLLM server (port 8000)")
-    parser.add_argument("--wandb_project", type=str, default="sparc-grpo")
+    parser.add_argument("--wandb_project", type=str, default="sparc-ppo")
     parser.add_argument("--wandb_entity", type=str, default=None)
     parser.add_argument("--wandb_run_id", type=str, default=None, help="Optional W&B run id to resume")
+    parser.add_argument("--batch_size", type=int, default=4)
+    parser.add_argument("--mini_batch_size", type=int, default=4)
+    parser.add_argument("--ppo_epochs", type=int, default=4)
+    parser.add_argument("--max_new_tokens", type=int, default=512)
+    parser.add_argument("--learning_rate", type=float, default=5e-6)
     args = parser.parse_args()
 
     state = PartialState()
@@ -210,65 +217,146 @@ def main():
         wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, resume="allow" if args.wandb_run_id else None, config={
             "model": args.model,
             "dataset": "lkaesberg/SPaRC",
-            "trainer": "GRPO",
-            "use_vllm": True,
-            "vllm_mode": "server",
-            "vllm_server_host": args.vllm_server_host,
-        })
+            "trainer": "PPO"},
+            settings=wandb.Settings(init_timeout=3600)
+        )
 
     # Load datasets
     train_raw = load_dataset("lkaesberg/SPaRC", "all", split="train")
     eval_raw = load_dataset("lkaesberg/SPaRC", "all", split="test[:100]")
 
     # Transform to prompt format
-    train_ds = to_grpo_prompt_format(train_raw)
-    eval_ds = to_grpo_prompt_format(eval_raw)
+    train_ds = to_ppo_prompt_format(train_raw)
+    eval_ds = to_ppo_prompt_format(eval_raw)
 
     # Build reward functions with access to original examples
     combined_examples: List[Dict[str, Any]] = list(train_raw) + list(eval_raw)
     rewards = build_sparc_reward_functions(combined_examples)
 
-    # Minimal GRPO config per docs; vLLM in server mode
-    config = GRPOConfig(
-        output_dir=f"./checkpoints/grpo_outputs_{args.model.replace('/', '_')}",
-        report_to="wandb",
-        per_device_train_batch_size=1,
-        per_device_eval_batch_size=1,
-        bf16=True,
-        logging_steps=10,
-        save_strategy="no",
-        do_eval=False,
-        eval_on_start=False,
-        eval_strategy="steps",
-        eval_steps=500,
-        use_vllm=True,
-        vllm_mode="server",
-        vllm_server_host=args.vllm_server_host,
-        vllm_server_timeout=3600,
-        gradient_checkpointing=True,
-        max_completion_length=10000, 
-        max_prompt_length=5000,
-        num_generations=4,
-        num_train_epochs=4,
-        # Built-in weighting of multiple reward functions
-        reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
-        scale_rewards=False,
-        loss_type="dr_grpo"
+    # PPO setup
+    config = PPOConfig(
+        model_name=args.model,
+        learning_rate=args.learning_rate,
+        log_with="wandb",
+        batch_size=args.batch_size,
+        mini_batch_size=args.mini_batch_size,
+        ppo_epochs=args.ppo_epochs,
+        target_kl=0.1,
+        seed=42,
     )
 
-    trainer = GRPOTrainer(
-        model=args.model,
-        args=config,
-        reward_funcs=rewards,
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
+    tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=True)
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+
+    model = AutoModelForCausalLM.from_pretrained(args.model)
+
+    ppo_trainer = PPOTrainer(
+        config=config,
+        model=model,
+        tokenizer=tokenizer,
+        dataset=train_ds,
     )
 
-    # Resume only if a run id was provided
-    trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
+    # Reward aggregation weights (aligned with GRPO setup)
+    reward_weights = [1.0, 0.25, 0.25, 0.25, 0.25, 0.1]
+
+    def _aggregate_scalar_rewards(completions: List[str], prompts: List[Any]) -> List[float]:
+        # Compute each component, then weighted sum
+        component_funcs = rewards
+        component_values = [func(completions, prompts) for func in component_funcs]
+        scalars: List[float] = []
+        for i in range(len(completions)):
+            total = 0.0
+            for w, vals in zip(reward_weights, component_values):
+                total += w * float(vals[i])
+            scalars.append(total)
+        if is_main and len(scalars) > 0 and wandb.run is not None:
+            wandb.log({
+                "rewards/scalar_mean": sum(scalars) / len(scalars)
+            })
+        return scalars
+
+    # Training loop using PPO
+    max_new_tokens = int(args.max_new_tokens)
+    for epoch in range(args.ppo_epochs):
+        for batch in ppo_trainer.dataloader:
+            prompts_messages: List[Any] = batch["prompt"]
+
+            # Build chat-formatted input strings
+            prompts_texts: List[str] = []
+            for msgs in prompts_messages:
+                if hasattr(tokenizer, "apply_chat_template") and isinstance(msgs, list) and (len(msgs) == 0 or isinstance(msgs[0], dict)):
+                    try:
+                        text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+                    except Exception:
+                        # Fallback: concatenate message contents
+                        if isinstance(msgs, list):
+                            text = "\n".join(str(m.get("content", m)) if isinstance(m, dict) else str(m) for m in msgs)
+                        else:
+                            text = str(msgs)
+                else:
+                    if isinstance(msgs, list):
+                        text = "\n".join(str(m.get("content", m)) if isinstance(m, dict) else str(m) for m in msgs)
+                    else:
+                        text = str(msgs)
+                prompts_texts.append(text)
+
+            # Tokenize inputs
+            query_toks = tokenizer(prompts_texts, return_tensors="pt", padding=True, truncation=True)
+            query_input_ids = query_toks.input_ids.to(ppo_trainer.accelerator.device)
+            query_attention_mask = query_toks.attention_mask.to(ppo_trainer.accelerator.device)
+
+            # Generate responses
+            gen_out = ppo_trainer.generate(
+                query_input_ids,
+                attention_mask=query_attention_mask,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                top_k=50,
+                top_p=0.95,
+                temperature=0.7,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+            )
+
+            # Split out just the generated portion per sample
+            input_lengths = (query_attention_mask.sum(dim=1)).tolist()
+            responses_decoded: List[str] = []
+            response_tensors: List[Any] = []
+            for i in range(gen_out.shape[0]):
+                start = int(input_lengths[i])
+                resp_ids = gen_out[i][start:]
+                response_tensors.append(resp_ids)
+                responses_decoded.append(tokenizer.decode(resp_ids, skip_special_tokens=True))
+
+            # Compute scalar rewards
+            rewards_scalar = _aggregate_scalar_rewards(responses_decoded, prompts_messages)
+
+            # Convert scalar rewards to per-token reward tensors
+            rewards_tokenwise = []
+            for i, resp in enumerate(response_tensors):
+                if hasattr(resp, "shape"):
+                    length = int(resp.shape[0])
+                else:
+                    length = len(resp)
+                r = float(rewards_scalar[i])
+                rewards_tokenwise.append(torch.full((length,), r, device=ppo_trainer.accelerator.device))
+
+            # Run PPO step
+            ppo_trainer.step(list(query_input_ids), response_tensors, rewards_tokenwise)
+
+        if is_main:
+            wandb.log({"epoch": epoch})
+
+    # Save model
+    save_dir = f"./models/{args.model.split('/')[-1]}-SPaRC-PPO"
+    os.makedirs(save_dir, exist_ok=True)
+    ppo_trainer.model.save_pretrained(save_dir)
+    tokenizer.save_pretrained(save_dir)
 
     if is_main:
-        trainer.save_model(f"./checkpoints/final_grpo_model_{args.model.replace('/', '_')}")
         wandb.finish()
 
 

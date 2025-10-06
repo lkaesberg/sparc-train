@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=sparc-grpo
+#SBATCH --job-name=sparc-ppo
 #SBATCH --partition=scc-gpu
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
@@ -8,8 +8,8 @@
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 32
 #SBATCH -C inet
-#SBATCH --output=logs_grpo/%x_%j.log
-#SBATCH --error=logs_grpo/%x_%j.log
+#SBATCH --output=logs_ppo/%x_%j.log
+#SBATCH --error=logs_ppo/%x_%j.log
 
 module load gcc/13.2.0
 module load cuda/12.6.2
@@ -20,7 +20,7 @@ source activate vllm
 # Dynamic layout from a single TRAIN_NODE_COUNT (or derive from allocation)
 # - By default we use 1 node for vLLM and the rest for training
 # - You can override with env vars when submitting, e.g.:
-#     TRAIN_NODE_COUNT=2 GPUS_PER_NODE=4 sbatch -N 3 run-sparc-grpo-vllm-deep.sbatch
+#     TRAIN_NODE_COUNT=2 GPUS_PER_NODE=4 sbatch -N 3 run-sparc-ppo-vllm-deep.sbatch
 #   Ensure the SBATCH -N equals TRAIN_NODE_COUNT + VLLM_NODE_COUNT
 
 # Discover allocated hosts
@@ -93,8 +93,8 @@ srun --nodes=${NUM_MACHINES} --ntasks=${NUM_MACHINES} --nodelist="${TRAIN_NODES[
       --main_process_port ${MAIN_PORT} \
       --machine_rank $SLURM_PROCID \
       --rdzv_backend c10d \
-      train_grpo.py \
+      train_ppo.py \
         --model \"${MODEL_NAME}\" \
         --vllm_server_host ${VLLM_NODE} \
-        --wandb_project sparc-grpo \
+        --wandb_project sparc-ppo \
   "

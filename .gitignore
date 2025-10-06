@@ -1,3 +1,7 @@
 *.out
 wandb
 tmp
+!logs_grpo/.gitkeep
+!logs_sft/.gitkeep
+logs_grpo
+logs_sft

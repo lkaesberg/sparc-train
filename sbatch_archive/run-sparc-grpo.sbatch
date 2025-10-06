@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=sparc
+#SBATCH --job-name=sparc-grpo
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -15,4 +15,4 @@ source activate sparc
 nvidia-smi
 accelerate launch \
     --config_file fsdp.config \
-    train_sft.py
+    train_grpo.py 
