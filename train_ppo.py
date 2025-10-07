@@ -203,6 +203,7 @@ def main():
     parser.add_argument("--wandb_project", type=str, default="sparc-ppo")
     parser.add_argument("--wandb_entity", type=str, default=None)
     parser.add_argument("--wandb_run_id", type=str, default=None, help="Optional W&B run id to resume")
+    parser.add_argument("--run_name_addition", type=str, default=os.environ.get("RUN_NAME_ADDITION", ""), help="Optional suffix to append to run/model name")
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--mini_batch_size", type=int, default=4)
     parser.add_argument("--ppo_epochs", type=int, default=4)
@@ -213,8 +214,14 @@ def main():
     state = PartialState()
     is_main = state.is_main_process
 
+    # Compute unified run name: <base>-SPaRC-PPO[-addition]
+    _base = args.model.split('/')[-1]
+    _addition = (args.run_name_addition or "").strip()
+    _suffix = f"-{_addition}" if _addition else ""
+    run_name = f"{_base}-SPaRC-PPO{_suffix}"
+
     if is_main:
-        wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, resume="allow" if args.wandb_run_id else None, config={
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, name=run_name, resume="allow" if args.wandb_run_id else None, config={
             "model": args.model,
             "dataset": "lkaesberg/SPaRC",
             "trainer": "PPO"},
@@ -351,7 +358,7 @@ def main():
             wandb.log({"epoch": epoch})
 
     # Save model
-    save_dir = f"./models/{args.model.split('/')[-1]}-SPaRC-PPO"
+    save_dir = f"./models/{run_name}"
     os.makedirs(save_dir, exist_ok=True)
     ppo_trainer.model.save_pretrained(save_dir)
     tokenizer.save_pretrained(save_dir)

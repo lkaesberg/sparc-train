@@ -202,13 +202,20 @@ def main():
     parser.add_argument("--wandb_project", type=str, default="sparc-grpo")
     parser.add_argument("--wandb_entity", type=str, default=None)
     parser.add_argument("--wandb_run_id", type=str, default=None, help="Optional W&B run id to resume")
+    parser.add_argument("--run_name_addition", type=str, default=os.environ.get("RUN_NAME_ADDITION", ""), help="Optional suffix to append to run/model name")
     args = parser.parse_args()
 
     state = PartialState()
     is_main = state.is_main_process
 
+    # Compute unified run name: <base>-SPaRC-GRPO[-addition]
+    _base = args.model.split('/')[-1]
+    _addition = (args.run_name_addition or "").strip()
+    _suffix = f"-{_addition}" if _addition else ""
+    run_name = f"{_base}-SPaRC-GRPO{_suffix}"
+
     if is_main:
-        wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, resume="allow" if args.wandb_run_id else None, config={
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity, id=args.wandb_run_id, name=run_name, resume="allow" if args.wandb_run_id else None, config={
             "model": args.model,
             "dataset": "lkaesberg/SPaRC",
             "trainer": "GRPO",
@@ -267,7 +274,7 @@ def main():
     # Resume only if a run id was provided
     trainer.train(resume_from_checkpoint=bool(args.wandb_run_id))
 
-    trainer.save_model(f"./models/{args.model.split('/')[-1]}-SPaRC-GRPO")
+    trainer.save_model(f"./models/{run_name}")
 
     if is_main:
         wandb.finish()

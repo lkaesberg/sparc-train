@@ -23,6 +23,11 @@ source activate vllm
 #     TRAIN_NODE_COUNT=2 GPUS_PER_NODE=4 sbatch -N 3 run-sparc-grpo-vllm-deep.sbatch
 #   Ensure the SBATCH -N equals TRAIN_NODE_COUNT + VLLM_NODE_COUNT
 
+# Central model selection (override by exporting MODEL_NAME before sbatch)
+MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
+echo "Model: ${MODEL_NAME}"
+RUN_NAME_ADDITION=${RUN_NAME_ADDITION:-""}
+
 # Discover allocated hosts
 NODELIST=( $(scontrol show hostnames ${SLURM_JOB_NODELIST}) )
 TOTAL_NODES=${#NODELIST[@]}
@@ -57,10 +62,6 @@ MAIN_PORT=${MAIN_PORT:-29500}
 echo "Train nodes (${NUM_MACHINES}): ${TRAIN_NODES[*]}"
 echo "vLLM node:  ${VLLM_NODE}"
 echo "GPUs per node: ${GPUS_PER_NODE} | Processes: ${NUM_PROCESSES} | TP size: ${VLLM_TP_SIZE}"
-
-# Central model selection (override by exporting MODEL_NAME before sbatch)
-MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
-echo "Model: ${MODEL_NAME}"
 
 # Launch vLLM server on the dedicated node as a background step
 srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
@@ -97,4 +98,5 @@ srun --nodes=${NUM_MACHINES} --ntasks=${NUM_MACHINES} --nodelist="${TRAIN_NODES[
         --model \"${MODEL_NAME}\" \
         --vllm_server_host ${VLLM_NODE} \
         --wandb_project sparc-grpo \
+        --run_name_addition ${RUN_NAME_ADDITION} \
   "

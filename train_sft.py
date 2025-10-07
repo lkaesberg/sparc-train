@@ -15,6 +15,11 @@ from transformers import TrainerCallback
 
 
 model_name = os.environ.get("MODEL_NAME", "Qwen/Qwen3-8B")
+# Build unified run/model save name: <base>-SPaRC-SFT[-<addition>]
+_base_model_name = model_name.split('/')[-1]
+_addition = os.environ.get("RUN_NAME_ADDITION", "").strip()
+_addition_suffix = f"-{_addition}" if _addition else ""
+run_name = f"{_base_model_name}-SPaRC-SFT{_addition_suffix}"
 
 # Multi-GPU device setup - initialize a single PartialState and reuse it
 state = PartialState()
@@ -26,7 +31,7 @@ if is_main_process:
     wandb.init(
         entity="larskaesberg-university-of-g-ttingen",
         project="sparc-sft",
-        name=f"{model_name}-sparc-sft",
+        name=run_name,
         config={
             "model": model_name,
             "dataset": "lkaesberg/SPaRC",
@@ -488,7 +493,7 @@ if is_main_process:
     print("DEBUG: Training completed. Saving final model...")
     
 # Save the final model in standard format
-final_model_dir = f"./models/{model_name.split('/')[-1]}-SPaRC-SFT"
+final_model_dir = f"./models/{run_name}"
 trainer.save_model(final_model_dir)
 
 if is_main_process:

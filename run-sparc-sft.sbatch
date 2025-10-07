@@ -18,7 +18,9 @@ source activate sparc
 nvidia-smi
 
 # Central model selection (override by exporting MODEL_NAME before sbatch)
-export MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-32B}
+MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-32B}
+echo "Model: ${MODEL_NAME}"
+RUN_NAME_ADDITION=${RUN_NAME_ADDITION:-""}
 
 # Discover allocated hosts for multi-node training
 NODELIST=( $(scontrol show hostnames ${SLURM_JOB_NODELIST}) )
