@@ -242,7 +242,6 @@ def main():
 
     # PPO setup
     config = PPOConfig(
-        model_name=args.model,
         learning_rate=args.learning_rate,
         log_with="wandb",
         batch_size=args.batch_size,
