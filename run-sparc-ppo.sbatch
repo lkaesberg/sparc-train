@@ -16,13 +16,6 @@ module load cuda/12.6.2
 
 source activate vllm
 
-#
-# Dynamic layout from a single TRAIN_NODE_COUNT (or derive from allocation)
-# - By default we use 1 node for vLLM and the rest for training
-# - You can override with env vars when submitting, e.g.:
-#     TRAIN_NODE_COUNT=2 GPUS_PER_NODE=4 sbatch -N 3 run-sparc-ppo-vllm-deep.sbatch
-#   Ensure the SBATCH -N equals TRAIN_NODE_COUNT + VLLM_NODE_COUNT
-
 # Central model selection (override by exporting MODEL_NAME before sbatch)
 MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
 echo "Model: ${MODEL_NAME}"
@@ -33,54 +26,19 @@ NODELIST=( $(scontrol show hostnames ${SLURM_JOB_NODELIST}) )
 TOTAL_NODES=${#NODELIST[@]}
 
 # User-tunable knobs (with safe defaults)
-VLLM_NODE_COUNT=${VLLM_NODE_COUNT:-1}
 GPUS_PER_NODE=${GPUS_PER_NODE:-4}
-VLLM_TP_SIZE=${VLLM_TP_SIZE:-${GPUS_PER_NODE}}
 
-# Determine number of training nodes
-if [[ -n "${TRAIN_NODE_COUNT}" ]]; then
-  TRAIN_NODES_COUNT=${TRAIN_NODE_COUNT}
-else
-  TRAIN_NODES_COUNT=$(( TOTAL_NODES - VLLM_NODE_COUNT ))
-fi
-
-if (( TRAIN_NODES_COUNT < 1 )); then
-  echo "Error: TRAIN_NODE_COUNT must be >= 1 (total=${TOTAL_NODES}, vllm_nodes=${VLLM_NODE_COUNT})." >&2
-  exit 1
-fi
-
-# Split nodes: first TRAIN_NODES_COUNT for training, next 1 for vLLM
-TRAIN_NODES=("${NODELIST[@]:0:${TRAIN_NODES_COUNT}}")
-VLLM_NODE="${NODELIST[$((TRAIN_NODES_COUNT))]}"
-
-# Derived distributed settings
-NUM_MACHINES=${TRAIN_NODES_COUNT}
-NUM_PROCESSES=$(( TRAIN_NODES_COUNT * GPUS_PER_NODE ))
-MAIN_ADDR="${TRAIN_NODES[0]}"
+# Derived distributed settings - use all nodes for training
+NUM_MACHINES=${TOTAL_NODES}
+NUM_PROCESSES=$(( TOTAL_NODES * GPUS_PER_NODE ))
+MAIN_ADDR="${NODELIST[0]}"
 MAIN_PORT=${MAIN_PORT:-29500}
 
-echo "Train nodes (${NUM_MACHINES}): ${TRAIN_NODES[*]}"
-echo "vLLM node:  ${VLLM_NODE}"
-echo "GPUs per node: ${GPUS_PER_NODE} | Processes: ${NUM_PROCESSES} | TP size: ${VLLM_TP_SIZE}"
+echo "Train nodes (${NUM_MACHINES}): ${NODELIST[*]}"
+echo "GPUs per node: ${GPUS_PER_NODE} | Total processes: ${NUM_PROCESSES}"
 
-# Launch vLLM server on the dedicated node as a background step
-srun --nodes=1 --ntasks=1 --nodelist=${VLLM_NODE} \
-  bash -lc "\
-    module load gcc/13.2.0; \
-    module load cuda/12.6.2; \
-    nvidia-smi; \
-    source activate vllm; \
-    trl vllm-serve \
-      --model "${MODEL_NAME}" \
-      --host 0.0.0.0 --port 8000 \
-      --tensor_parallel_size ${VLLM_TP_SIZE} \
-  " &
-
-# Give the server time to start
-sleep 30
-
-# Start distributed training across the training nodes
-srun --nodes=${NUM_MACHINES} --ntasks=${NUM_MACHINES} --nodelist="${TRAIN_NODES[*]}" \
+# Start distributed training across all nodes
+srun --nodes=${NUM_MACHINES} --ntasks=${NUM_MACHINES} \
   bash -lc "\
     module load gcc/13.2.0; \
     module load cuda/12.6.2; \
@@ -92,11 +50,10 @@ srun --nodes=${NUM_MACHINES} --ntasks=${NUM_MACHINES} --nodelist="${TRAIN_NODES[
       --num_machines ${NUM_MACHINES} \
       --main_process_ip ${MAIN_ADDR} \
       --main_process_port ${MAIN_PORT} \
-      --machine_rank $SLURM_PROCID \
+      --machine_rank \$SLURM_PROCID \
       --rdzv_backend c10d \
       train_ppo.py \
         --model \"${MODEL_NAME}\" \
-        --vllm_server_host ${VLLM_NODE} \
         --wandb_project sparc-ppo \
         --run_name_addition ${RUN_NAME_ADDITION} \
   "
