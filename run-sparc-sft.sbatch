@@ -7,7 +7,7 @@
 #SBATCH --time=48:00:00 
 #SBATCH --mem=256G
 #SBATCH -c 32
-#SBATCH -C inet
+#SBATCH -C inet&80gb
 #SBATCH --output=logs_sft/%x_%j.log
 #SBATCH --error=logs_sft/%x_%j.log
 

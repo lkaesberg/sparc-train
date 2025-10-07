@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=1   
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 32
-#SBATCH -C inet
+#SBATCH -C inet&80gb
 #SBATCH --output=logs_grpo/%x_%j.log
 #SBATCH --error=logs_grpo/%x_%j.log
 
