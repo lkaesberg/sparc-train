@@ -63,8 +63,6 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
                     rewards_local.append(0.0)
             except Exception:
                 rewards_local.append(0.0)
-        if is_main and len(rewards_local) > 0 and wandb.run is not None:
-            wandb.log({"rewards/perfect_mean": sum(rewards_local) / len(rewards_local)})
         return rewards_local
 
     # Helper to compute analysis dict safely
@@ -243,12 +241,9 @@ def main():
     # PPO setup
     config = PPOConfig(
         learning_rate=args.learning_rate,
-        log_with="wandb",
         batch_size=args.batch_size,
         mini_batch_size=args.mini_batch_size,
         ppo_epochs=args.ppo_epochs,
-        target_kl=0.1,
-        seed=42,
     )
 
     tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=True)
@@ -267,6 +262,14 @@ def main():
 
     # Reward aggregation weights (aligned with GRPO setup)
     reward_weights = [1.0, 0.25, 0.25, 0.25, 0.25, 0.1]
+    reward_names = [
+        "perfect_solution",
+        "starts_and_ends", 
+        "connected_line",
+        "non_intersecting",
+        "no_rule_crossing",
+        "format_hint"
+    ]
 
     def _aggregate_scalar_rewards(completions: List[str], prompts: List[Any]) -> List[float]:
         # Compute each component, then weighted sum
@@ -278,10 +281,23 @@ def main():
             for w, vals in zip(reward_weights, component_values):
                 total += w * float(vals[i])
             scalars.append(total)
+        
+        # Log all reward components to W&B
         if is_main and len(scalars) > 0 and wandb.run is not None:
-            wandb.log({
-                "rewards/scalar_mean": sum(scalars) / len(scalars)
-            })
+            log_dict = {"rewards/total_mean": sum(scalars) / len(scalars)}
+            
+            # Log mean of each component (unweighted)
+            for name, vals in zip(reward_names, component_values):
+                if len(vals) > 0:
+                    log_dict[f"rewards/{name}_mean"] = sum(vals) / len(vals)
+            
+            # Log weighted contribution of each component
+            for name, w, vals in zip(reward_names, reward_weights, component_values):
+                if len(vals) > 0:
+                    weighted_mean = w * (sum(vals) / len(vals))
+                    log_dict[f"rewards/{name}_weighted"] = weighted_mean
+            
+            wandb.log(log_dict)
         return scalars
 
     # Training loop using PPO
@@ -351,7 +367,11 @@ def main():
                 rewards_tokenwise.append(torch.full((length,), r, device=ppo_trainer.accelerator.device))
 
             # Run PPO step
-            ppo_trainer.step(list(query_input_ids), response_tensors, rewards_tokenwise)
+            stats = ppo_trainer.step(list(query_input_ids), response_tensors, rewards_tokenwise)
+            
+            # Log PPO stats to W&B
+            if is_main and stats and wandb.run is not None:
+                wandb.log(stats)
 
         if is_main:
             wandb.log({"epoch": epoch})
