@@ -11,7 +11,7 @@ pip install psutil
 pip install flash_attn --no-build-isolation
 ```
 
-Symlink the checkpoints folder to your scratch disk with more disk memory
+Symlink the models folder to your scratch disk with more disk memory
 ```
-ln -s /scratch/..../checkpoints $HOME/sparc-train/checkpoints
+ln -s /scratch/..../models $HOME/sparc-train/models
 ``
