@@ -51,7 +51,7 @@ if is_main_process:
     print(f"DEBUG: Expanded train dataset size: {len(dataset)}")
 
 training_args = SFTConfig(
-    output_dir="./models/tmp",
+    output_dir=f"./models/tmp/{run_name}",
     report_to="wandb",
     logging_steps=10,
     warmup_steps=100,
@@ -73,7 +73,7 @@ training_args = SFTConfig(
     num_train_epochs=20,
     metric_for_best_model="eval_solution_accuracy",  # Use your custom metric with eval_ prefix
     greater_is_better=True,  # Higher solution_accuracy is better
-    save_total_limit=2,
+    save_total_limit=3,
     ddp_find_unused_parameters=False,  # Optimize for multi-GPU
     logging_dir="./logs_sft",  # Add logging directory
     logging_first_step=True,  # Log the first step

@@ -1,0 +1,18 @@
+model,variant,accuracy
+Qwen3-0.6B,Baseline,0.4
+Qwen3-14B,Baseline,12.6
+Qwen3-32B,Baseline,7.0
+Qwen3-0.6B,16R,4.4
+Qwen3-0.6B,8E,3.8
+Qwen3-0.6B,L,2.8
+Qwen3-0.6B,Default,3.0
+Qwen3-14B,L,14.2
+Qwen3-14B,Default,10.2
+Qwen3-32B,L,16.6
+Qwen3-32B,Default,13.6
+Qwen3-4B,16R,6.2
+Qwen3-4B,8E,4.2
+Qwen3-4B,L,10.8
+Qwen3-4B,Default,6.2
+o4-mini (OpenAI),Baseline,15.8
+Qwen3-4B,Baseline,7.8
