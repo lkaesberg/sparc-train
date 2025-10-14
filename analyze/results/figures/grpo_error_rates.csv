@@ -34,6 +34,11 @@ Qwen3-0.6B,Default,Disconnected Paths,5.599999999999994
 Qwen3-0.6B,Default,Wrong Start/End,5.0
 Qwen3-0.6B,Default,Intersecting Paths,5.200000000000003
 Qwen3-0.6B,Default,Rule Violations,18.200000000000003
+Qwen3-0.6B,SFT,Invalid Paths,45.4
+Qwen3-0.6B,SFT,Disconnected Paths,3.5999999999999943
+Qwen3-0.6B,SFT,Wrong Start/End,7.200000000000003
+Qwen3-0.6B,SFT,Intersecting Paths,41.8
+Qwen3-0.6B,SFT,Rule Violations,6.400000000000006
 Qwen3-14B,L,Invalid Paths,18.0
 Qwen3-14B,L,Disconnected Paths,9.599999999999994
 Qwen3-14B,L,Wrong Start/End,1.2000000000000028
@@ -44,6 +49,11 @@ Qwen3-14B,Default,Disconnected Paths,1.4000000000000057
 Qwen3-14B,Default,Wrong Start/End,0.20000000000000284
 Qwen3-14B,Default,Intersecting Paths,2.200000000000003
 Qwen3-14B,Default,Rule Violations,2.5999999999999943
+Qwen3-14B,SFT,Invalid Paths,34.599999999999994
+Qwen3-14B,SFT,Disconnected Paths,0.4000000000000057
+Qwen3-14B,SFT,Wrong Start/End,3.799999999999997
+Qwen3-14B,SFT,Intersecting Paths,34.2
+Qwen3-14B,SFT,Rule Violations,1.2000000000000028
 Qwen3-32B,L,Invalid Paths,32.599999999999994
 Qwen3-32B,L,Disconnected Paths,16.400000000000006
 Qwen3-32B,L,Wrong Start/End,1.0
@@ -54,6 +64,11 @@ Qwen3-32B,Default,Disconnected Paths,7.200000000000003
 Qwen3-32B,Default,Wrong Start/End,1.2000000000000028
 Qwen3-32B,Default,Intersecting Paths,8.799999999999997
 Qwen3-32B,Default,Rule Violations,11.200000000000003
+Qwen3-32B,SFT,Invalid Paths,31.799999999999997
+Qwen3-32B,SFT,Disconnected Paths,0.5999999999999943
+Qwen3-32B,SFT,Wrong Start/End,1.5999999999999943
+Qwen3-32B,SFT,Intersecting Paths,30.599999999999994
+Qwen3-32B,SFT,Rule Violations,2.0
 Qwen3-4B,16R,Invalid Paths,1.7999999999999972
 Qwen3-4B,16R,Disconnected Paths,0.7999999999999972
 Qwen3-4B,16R,Wrong Start/End,0.4000000000000057
@@ -74,6 +89,11 @@ Qwen3-4B,Default,Disconnected Paths,0.4000000000000057
 Qwen3-4B,Default,Wrong Start/End,0.4000000000000057
 Qwen3-4B,Default,Intersecting Paths,0.0
 Qwen3-4B,Default,Rule Violations,0.20000000000000284
+Qwen3-4B,SFT,Invalid Paths,42.6
+Qwen3-4B,SFT,Disconnected Paths,16.799999999999997
+Qwen3-4B,SFT,Wrong Start/End,9.0
+Qwen3-4B,SFT,Intersecting Paths,16.200000000000003
+Qwen3-4B,SFT,Rule Violations,22.0
 o4-mini (OpenAI),Baseline,Invalid Paths,59.2
 o4-mini (OpenAI),Baseline,Disconnected Paths,27.599999999999994
 o4-mini (OpenAI),Baseline,Wrong Start/End,3.799999999999997

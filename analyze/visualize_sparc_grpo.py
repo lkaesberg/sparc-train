@@ -34,8 +34,10 @@ def standardize_model_size_from_filename(filename: str) -> str:
 
 
 def extract_variant_from_filename(filename: str) -> str:
-    # Variants are encoded like ...-GRPO-16R_stats.csv, ...-GRPO-8E_stats.csv, ...-GRPO-L_stats.csv
+    # Variants are encoded like ...-GRPO-16R_stats.csv, ...-GRPO-8E_stats.csv, ...-GRPO-L_stats.csv, ...-SFT_stats.csv
     lower = filename.lower()
+    if "-sft" in lower:
+        return "SFT"
     if "-grpo-16r" in lower:
         return "16R"
     if "-grpo-8e" in lower:
@@ -45,7 +47,7 @@ def extract_variant_from_filename(filename: str) -> str:
     # default GRPO (no suffix)
     if "-grpo" in lower:
         return "Default"
-    # Non-GRPO file treated as baseline
+    # Non-GRPO/SFT file treated as baseline
     return "Baseline"
 
 
@@ -202,7 +204,7 @@ def sort_categoricals(overall_df: pd.DataFrame, diff_df: pd.DataFrame, err_df: p
     ], ignore_index=True).dropna())
     model_order = [m for m in full_model_order if m in set(present_models)]
 
-    variant_order = ["Baseline", "Default", "16R", "8E", "L"]
+    variant_order = ["Baseline", "SFT", "Default", "16R", "8E", "L"]
 
     def apply_categories(df: pd.DataFrame) -> pd.DataFrame:
         if not df.empty:
@@ -217,7 +219,8 @@ def sort_categoricals(overall_df: pd.DataFrame, diff_df: pd.DataFrame, err_df: p
 
 def variant_to_label(variant: str) -> str:
     mapping = {
-        "Baseline": "Baseline (no GRPO)",
+        "Baseline": "Baseline (no training)",
+        "SFT": "SFT (supervised fine-tuning)",
         "Default": "GRPO: default (4 rollouts, 4 epochs)",
         "16R": "GRPO: 16 rollouts",
         "8E": "GRPO: 8 epochs",
@@ -257,7 +260,8 @@ def style():
 def get_color_palette():
     """Professional color palette for variants"""
     return {
-        "Baseline (no GRPO)": "#95a5a6",  # Cool gray
+        "Baseline (no training)": "#95a5a6",  # Cool gray
+        "SFT (supervised fine-tuning)": "#16a085",  # Teal
         "GRPO: default (4 rollouts, 4 epochs)": "#3498db",  # Bright blue
         "GRPO: 16 rollouts": "#e74c3c",  # Vibrant red
         "GRPO: 8 epochs": "#2ecc71",  # Fresh green
@@ -298,33 +302,33 @@ def save_overall_accuracy_plot(df: pd.DataFrame, out_path: Path):
     palette = get_palette_list(hue_order)
 
     if with_seaborn():
-        # Create a beautiful horizontal point plot with connected lines per variant
+        # Create a clean grouped bar chart
         fig, ax = plt.subplots(figsize=(14, 7))
         
-        # Use pointplot for elegant connected markers
-        sns.pointplot(
+        sns.barplot(
             data=df_plot,
-            y="model",
-            x="accuracy",
+            x="model",
+            y="accuracy",
             hue="variant_label",
             hue_order=hue_order,
             palette=palette,
-            markers=["o", "s", "D", "^", "v"][:len(hue_order)],
-            linestyles=["-", "--", "-.", ":", "-"][:len(hue_order)],
-            markersize=10,
-            linewidth=2.5,
-            dodge=0.4,
-            errorbar=None,
             ax=ax,
+            edgecolor='black',
+            linewidth=0.8,
         )
         
-        ax.set_xlim(0, max(100, df_plot["accuracy"].max() * 1.1))
-        ax.set_xlabel("Accuracy (%)", fontweight="bold")
-        ax.set_ylabel("Model Size", fontweight="bold")
-        ax.set_title("SPaRC GRPO: Overall Accuracy Comparison", pad=20, fontsize=18)
+        ax.set_ylim(0, min(100, df_plot["accuracy"].max() * 1.15))
+        ax.set_ylabel("Accuracy (%)", fontweight="bold", fontsize=13)
+        ax.set_xlabel("Model", fontweight="bold", fontsize=13)
+        ax.set_title("SPaRC GRPO: Overall Accuracy Comparison", pad=20, fontsize=18, fontweight='bold')
+        ax.tick_params(axis='both', labelsize=12)
+        
+        # Add value labels on top of bars
+        for container in ax.containers:
+            ax.bar_label(container, fmt='%.1f', fontsize=8, padding=3)
         
         # Add subtle grid
-        ax.grid(axis='x', alpha=0.3, linestyle='--', linewidth=0.8)
+        ax.grid(axis='y', alpha=0.3, linestyle='--', linewidth=0.8)
         ax.set_axisbelow(True)
         
         # Enhanced legend
@@ -336,8 +340,9 @@ def save_overall_accuracy_plot(df: pd.DataFrame, out_path: Path):
             loc="upper left",
             frameon=True,
             fancybox=True,
-            shadow=True,
+            shadow=False,
             fontsize=10,
+            title_fontsize=11,
         )
     else:
         # Fallback grouped bars
@@ -350,7 +355,7 @@ def save_overall_accuracy_plot(df: pd.DataFrame, out_path: Path):
         for i, (var, label) in enumerate(zip(variants, labels)):
             sub = df_plot[df_plot["variant"] == var]
             vals = [sub[sub["model"] == m]["accuracy"].mean() if (sub["model"] == m).any() else float("nan") for m in models]
-            ax.bar([xi + i * width for xi in x], vals, width=width, label=label, color=palette[i])
+            ax.bar([xi + i * width for xi in x], vals, width=width, label=label, color=palette[i], edgecolor='black', linewidth=0.8)
         center = ((len(variants) - 1) * width) / 2.0
         ax.set_xticks([xi + center for xi in x])
         ax.set_xticklabels(models, rotation=0)
@@ -681,7 +686,7 @@ def save_summary_dashboard(overall_df: pd.DataFrame, diff_df: pd.DataFrame, err_
         model_subset = diff_plot[diff_plot['model'] == model]
         # For o4-mini, just show baseline
         if model == "o4-mini (OpenAI)":
-            baseline_data = model_subset[model_subset['variant_label'] == "Baseline (no GRPO)"]
+            baseline_data = model_subset[model_subset['variant_label'] == "Baseline (no training)"]
             if not baseline_data.empty:
                 ax3.plot(baseline_data['difficulty'], baseline_data['accuracy'],
                         marker='o', label=f"{model}", 
@@ -761,9 +766,9 @@ def save_summary_dashboard(overall_df: pd.DataFrame, diff_df: pd.DataFrame, err_
             colors_to_plot.append('#f39c12')  # Orange for o4-mini
             data_to_plot.append(vals)
     
-    # 3. GRPO variants (averaged across Qwen models)
+    # 3. SFT and GRPO variants (averaged across Qwen models)
     for variant in hue_order:
-        if variant == 'Baseline (no GRPO)':
+        if variant == 'Baseline (no training)':
             continue  # Already added
         qwen_variant = qwen_data[qwen_data['variant_label'] == variant]
         if not qwen_variant.empty and len(qwen_variant) > 0:
