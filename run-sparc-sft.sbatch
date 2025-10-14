@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=sparc-sft
 #SBATCH --partition=scc-gpu
-#SBATCH --nodes=4
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:A100:4
 #SBATCH --time=48:00:00 
@@ -18,7 +18,7 @@ source activate sparc
 nvidia-smi
 
 # Central model selection (override by exporting MODEL_NAME before sbatch)
-MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-32B}
+export MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-4B}
 echo "Model: ${MODEL_NAME}"
 RUN_NAME_ADDITION=${RUN_NAME_ADDITION:-""}
 

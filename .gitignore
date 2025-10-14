@@ -5,3 +5,5 @@ tmp
 !logs_sft/.gitkeep
 logs_grpo
 logs_sft
+logs_ppo
+models

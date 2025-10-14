@@ -1,0 +1,501 @@
+Puzzle ID,Difficulty,Solved,Path Length,Time (s),Issues
+aa31d05ed8fdb273,3,FAIL,33,184.42,"intersecting, rules"
+ebc9c10093a1255a,3,FAIL,26,124.92,None
+ed40414d615431d6,3,FAIL,12,161.27,None
+dce20e150e7fcced,5,FAIL,23,185.58,rules
+3fe8a85b768ae5b7,1,FAIL,6,200.80,rules
+1284a7249a4fa10f,3,FAIL,13,182.50,rules
+cbeb87b359947c42,3,FAIL,10,157.77,None
+c80d64b5c5e39d7b,5,FAIL,28,161.35,None
+24e8876585456ee5,5,FAIL,5,160.09,None
+196a88635b1c83b4,4,FAIL,14,130.23,None
+e82bd665d710bb75,2,FAIL,25,157.88,"intersecting, rules"
+c6739963a7308111,3,FAIL,10,126.08,disconnected
+953c10f2e4d6fd6,2,FAIL,20,133.84,None
+d91761f3ba340d,4,FAIL,13,89.08,start/end
+bc66c2e18fd6231b,3,FAIL,9,126.95,None
+4b236c53ea5fbbdf,3,FAIL,48,157.63,"intersecting, rules"
+5f9a92945a4ab62e,1,FAIL,10,127.54,None
+860fbc1cfd446f7c,3,FAIL,21,192.05,"disconnected, rules"
+5b5d43da944a752d,4,FAIL,12,152.00,rules
+971ad9f45d1bd53b,5,FAIL,16,121.59,disconnected
+5b3d4d35ac301050,2,PASS,12,82.94,None
+69a08c785ce5fcac,1,FAIL,11,124.74,rules
+a814bed4f6905ba4,5,FAIL,27,142.43,None
+f32fe4e5b37fedaa,5,FAIL,25,112.70,rules
+3ba7fc567dd14312,3,FAIL,11,129.13,None
+7ce0b04c1a28cca6,1,FAIL,23,178.09,intersecting
+8635ff1b1bcf0c2e,5,FAIL,16,98.63,None
+21df75919e7080e4,3,PASS,9,113.75,None
+daa2db8c01da0bfa,5,FAIL,11,143.15,None
+6443d25f8c289548,3,FAIL,22,158.65,rules
+91158b440e1d1942,5,FAIL,10,110.99,None
+1ba6ec5d1f0c3bc6,2,PASS,18,99.80,None
+de0f40e0c4c5852a,4,FAIL,11,107.10,"start/end, rules"
+7c2cc9e25acdc10f,4,FAIL,27,182.41,"disconnected, intersecting"
+146a216115846f70,5,FAIL,26,137.08,rules
+704931925890a56c,2,FAIL,18,77.21,None
+22c41f4911d10461,3,FAIL,22,190.60,disconnected
+75761871763e88e3,2,FAIL,11,117.41,None
+fee7fa98ecbf4534,1,PASS,7,108.40,None
+3abef01e5d890e13,4,FAIL,18,118.83,None
+a71c3513799bf094,2,FAIL,32,148.34,"start/end, intersecting, rules"
+3b229c1d0453a603,3,FAIL,3,133.23,None
+ba867d9c182c1124,1,FAIL,6,132.35,None
+22ee8177bb6b927d,4,FAIL,22,125.09,rules
+200a2fdec77f69b6,1,PASS,10,73.02,None
+4c7b5bd02c9270d,3,FAIL,13,122.24,None
+efb560f2141edf82,1,PASS,18,115.57,None
+b7b817f9033f188,5,FAIL,14,127.90,"start/end, rules"
+4cc3d963aecb0aec,3,FAIL,14,83.10,None
+6a4a59d9017e80e2,4,FAIL,17,131.82,rules
+a483b2ad65b79823,4,FAIL,17,100.60,None
+c611d73335c05ea3,3,FAIL,18,143.84,None
+9fc7d6795a3be635,2,PASS,11,139.32,None
+9b4f3b36495c1615,3,FAIL,13,135.23,None
+1b62c846b90e5d1d,3,FAIL,23,150.88,rules
+934d99322aa22dff,1,PASS,17,84.39,None
+cd5b6b24c51fb69a,2,FAIL,11,134.03,None
+bb9d7db6f55f1f1e,4,FAIL,22,105.50,start/end
+d1e03bb313e747a9,1,PASS,16,76.97,None
+e1b6f8b19d2f4176,2,FAIL,27,125.04,None
+c09ea70a605760d3,1,FAIL,5,89.80,None
+58a0f5bca3ff514c,5,FAIL,21,148.44,None
+625730bf3883005c,4,FAIL,13,147.09,None
+8211b75bfb0c714d,1,FAIL,8,54.66,None
+12adf37a767b56ea,2,FAIL,11,102.01,None
+4582b19904d9a029,1,FAIL,8,139.99,disconnected
+62035ff8ad16cb71,2,FAIL,16,128.41,disconnected
+5c3f4379847796c4,4,FAIL,11,160.69,disconnected
+bc71d833fad658fb,1,FAIL,16,58.56,None
+77da6edaa689f44a,2,FAIL,7,86.07,None
+7326259652efbc9d,4,FAIL,26,104.36,disconnected
+85f95e3fbcd76abb,3,FAIL,32,170.37,"intersecting, rules"
+bb667cb09578b4a3,5,FAIL,9,107.09,None
+ad8f394763490f26,3,FAIL,10,116.51,None
+3d1c8a00f582892,3,FAIL,11,120.66,None
+b10c07139b1aa490,1,FAIL,21,167.73,"intersecting, rules"
+5d259263ec5a5c9e,4,FAIL,12,148.51,start/end
+62d5ef592f8f91fc,3,FAIL,11,155.38,None
+be49f0eca3cd4c32,1,FAIL,36,172.96,"intersecting, rules"
+220246750ec56ccb,2,FAIL,10,113.16,None
+f425a63fc423ced0,3,FAIL,11,116.02,None
+b3e3c52cd5223942,5,FAIL,50,179.01,"intersecting, rules"
+ce576f59fcd8e5b5,4,FAIL,14,160.81,rules
+d71204c97803d9a,4,FAIL,19,135.14,None
+cc4ff7682e293a1b,2,PASS,12,151.58,None
+b25e33c50909fc03,2,FAIL,8,121.73,None
+f271fc95525040b1,5,FAIL,18,100.30,None
+9390c84b6360b4bb,1,FAIL,9,37.59,None
+a454bd9c3ad0168a,5,FAIL,45,141.56,"start/end, intersecting"
+db130c08db23e907,1,FAIL,20,102.42,None
+5c59a67541d92c71,5,FAIL,37,122.80,None
+745deea1055373eb,3,FAIL,13,73.78,None
+440d97e917325fb0,3,PASS,11,100.60,None
+dbd181183bb9f775,4,FAIL,22,179.92,None
+fef8e390bd7a2a7a,5,FAIL,21,134.07,"start/end, disconnected"
+3987c3fc8d33089e,3,FAIL,22,171.93,None
+851365be4fc5c5e,2,FAIL,15,101.86,disconnected
+e20e6b6a00158bdc,5,FAIL,15,135.32,start/end
+841b2d97bb365b8b,4,FAIL,33,119.12,disconnected
+b4d66071dc728f44,2,FAIL,10,157.93,None
+1e7c5367fa438e3b,5,FAIL,16,99.92,None
+b8eb6f7dd1cc9b86,1,FAIL,13,186.19,"disconnected, rules"
+1796837aa68c2b76,3,FAIL,19,132.60,disconnected
+598f03a76e659bbd,3,FAIL,29,152.89,"disconnected, intersecting, rules"
+a8ea92dd47f4186b,2,FAIL,22,150.48,None
+a305fe218d16e612,4,FAIL,16,112.20,None
+d58e426a05bbebe0,4,FAIL,17,120.67,None
+95baf8b98ab6874,5,FAIL,17,153.90,None
+d72e6e1a7317b676,4,FAIL,16,147.10,None
+b2888d9633744522,3,FAIL,11,84.24,None
+fb69acc1bff1c7b5,2,FAIL,12,165.81,start/end
+1b23ec5dcd81c575,2,FAIL,21,122.90,None
+dedb9695c830d9a1,5,FAIL,16,133.40,disconnected
+94e6829bc5fe599b,4,FAIL,31,144.25,"intersecting, rules"
+7f61e30cde11dfd2,5,FAIL,12,154.16,None
+ac07176ade6d4fcc,2,FAIL,23,183.43,rules
+aecb916b87a88a32,3,FAIL,16,99.36,None
+6a3a112c0f2e831b,5,FAIL,13,135.79,None
+e836ae53a1a6b880,5,FAIL,14,133.93,None
+58d9c6f1f97d78c1,2,FAIL,20,165.48,disconnected
+10bea253035c791c,2,FAIL,13,192.45,disconnected
+5569f16359d15a33,5,FAIL,44,162.94,"disconnected, intersecting, rules"
+d4af13ed1d455209,1,PASS,16,132.99,None
+4efa50053369c63c,3,FAIL,8,107.28,None
+4088920d22fbc15a,2,FAIL,19,141.11,rules
+9ecc1e98360e6c0d,3,FAIL,15,158.34,intersecting
+8b47902d43ed5c7,3,FAIL,11,137.98,None
+6911f7c1419318bb,4,FAIL,17,150.28,None
+ed62498f9a7cf7a5,4,FAIL,16,134.03,None
+4b518615758126ef,3,FAIL,11,135.56,rules
+a2a967199664a80,4,FAIL,5,118.79,start/end
+93c544fa7b73dc1a,4,FAIL,49,177.45,"intersecting, rules"
+b54da7bdff2713e1,2,FAIL,13,95.08,None
+2c5ddc804e5b35ba,1,FAIL,15,77.72,rules
+241a28965ab741d,1,PASS,7,108.04,None
+4a5c32111bf61aae,5,FAIL,27,162.79,rules
+65171c970b77339e,2,FAIL,19,90.17,"disconnected, rules"
+70c971586d6ab721,1,FAIL,23,176.64,"disconnected, intersecting"
+dd196820fff0f585,2,FAIL,6,104.71,None
+683d3d2b64d8d1fb,4,FAIL,18,138.06,rules
+3ca9fa7e19e2188c,4,PASS,13,97.66,None
+581706995f65f93d,5,FAIL,31,201.60,"disconnected, intersecting, rules"
+8f5dd8ca7b23f826,4,FAIL,20,110.72,None
+4c6a9d610b717d17,3,FAIL,17,172.55,None
+f701ba6827f8ceff,2,FAIL,32,135.00,rules
+24dd9a735b612dc1,3,FAIL,15,118.09,None
+138e21433d2e6a52,2,FAIL,18,94.39,disconnected
+72a1fec5c73b6560,4,FAIL,19,130.87,rules
+86c16115d5cda6a0,5,FAIL,29,165.67,"start/end, intersecting, rules"
+2790e863a5831db9,3,FAIL,18,122.53,rules
+ab298046d34718be,5,FAIL,12,119.60,None
+ad8274727f965b1c,1,FAIL,21,179.81,"intersecting, rules"
+a722e79130881da0,2,FAIL,19,144.87,None
+9435f4bc2b1cf34d,1,FAIL,28,167.05,disconnected
+2e4b26ec1c401cbe,4,FAIL,12,105.56,None
+8b308dfba88e4ac,3,FAIL,24,166.13,intersecting
+701d6d1daff25a25,2,FAIL,9,128.64,None
+f42b8d86bfb89096,1,PASS,26,139.93,None
+c4341ab9fd5c439c,1,FAIL,15,82.18,None
+97be11048bb04a30,3,FAIL,12,120.30,None
+7f403db698db059f,1,PASS,10,117.00,None
+9e892fbdd6f4c4a9,2,FAIL,13,164.46,disconnected
+b7672ba95aff4ff6,5,FAIL,21,168.04,None
+e0e6857dd441101b,2,FAIL,21,153.28,None
+a12c7a055e6395a2,2,FAIL,9,112.66,None
+e8f814f726cb4612,5,FAIL,19,124.86,disconnected
+fc19c4a5e89d29f4,4,FAIL,25,158.85,None
+4ec9d16a5a573d4e,2,FAIL,15,162.77,disconnected
+8bbb1046d8c49095,1,FAIL,11,88.74,None
+8e231f18dc7d476f,5,FAIL,16,134.48,rules
+50ed62dcb0f1bce3,4,FAIL,15,130.95,None
+154515f7b4e4fe2b,2,PASS,3,94.10,None
+1a43bd0f8e35bd1d,2,FAIL,25,190.48,"intersecting, rules"
+281ee792644831c5,2,FAIL,13,174.51,rules
+c881c033239a38de,3,FAIL,12,110.31,None
+a92cdc81d7a94775,5,FAIL,20,162.48,disconnected
+9283bfdf68bc92a8,2,FAIL,14,123.04,None
+b7cbcba402c57078,2,FAIL,25,171.42,intersecting
+11846421c28ce2aa,4,FAIL,45,188.07,"start/end, intersecting, rules"
+2a0e2b1240764998,4,FAIL,7,117.61,None
+577d6771b88eca36,3,FAIL,25,181.78,disconnected
+9c31840855436adc,5,FAIL,13,128.67,start/end
+495da6f2a1c1f750,5,FAIL,24,153.67,intersecting
+544628c3b3077982,5,FAIL,12,157.97,disconnected
+95bd7bebb5849554,2,FAIL,12,108.87,None
+5daa7098e5e15b8a,3,FAIL,14,113.96,None
+2d360e53c1cbf48e,2,FAIL,37,112.00,"disconnected, intersecting, rules"
+ad210a7535f9228a,3,PASS,16,89.17,None
+4d1f8e4f341d8ba,2,FAIL,28,181.45,"disconnected, intersecting"
+c0bf87685a69078a,2,FAIL,8,75.42,None
+e155b38ad467ae03,5,FAIL,10,147.05,"start/end, disconnected"
+525f7011d139f68e,1,FAIL,15,175.36,"intersecting, rules"
+85ace8079f2972ab,3,FAIL,15,178.33,None
+d79be6059dc29292,2,FAIL,24,143.93,intersecting
+bc2d315cd19b8b76,3,FAIL,13,157.93,disconnected
+336018fab47f526a,2,FAIL,15,132.26,None
+9a0559017cacdd9c,1,FAIL,26,179.24,None
+5d4260bea3b7d613,1,PASS,8,114.43,None
+14738c1f0e0cf17e,2,FAIL,7,122.70,None
+23f41583d9fe02ee,2,FAIL,21,98.95,intersecting
+58acf96418610e19,5,FAIL,20,168.09,disconnected
+624d40ea5ad58707,2,FAIL,23,176.68,"disconnected, intersecting, rules"
+9ec88d42d75e54fd,3,FAIL,5,84.13,None
+476e3c927a845ee2,3,FAIL,8,82.31,None
+664bfd4472be694f,2,FAIL,22,150.68,"start/end, disconnected, intersecting, rules"
+caa32446dc7ead46,2,FAIL,7,114.14,None
+4fda11641a1a910d,2,FAIL,30,184.80,"disconnected, intersecting"
+3e3df50762cc36ec,5,FAIL,30,138.98,None
+25d54c7266e20657,1,FAIL,18,105.98,None
+6989cd6ab3949a4f,3,FAIL,22,153.21,None
+590618124bd8505f,1,FAIL,8,82.32,None
+a467089dbb60a183,2,PASS,18,85.19,None
+d7085f61b66ce173,3,FAIL,27,108.01,None
+f435579761647ddf,3,FAIL,12,98.05,None
+feae5b1edd06f1d8,3,FAIL,18,117.25,None
+d68b4a78a6f0565e,4,FAIL,15,127.67,None
+4aef1ec8290c118,3,FAIL,16,131.95,None
+274e23e5326cd99e,3,FAIL,35,148.79,None
+cea6e767c4288aaa,5,FAIL,31,159.04,disconnected
+a4c2176205e2a4a2,5,FAIL,27,145.51,rules
+a3e158fe8036aa90,1,FAIL,12,87.25,None
+98325269e7bc1977,2,FAIL,19,176.78,"start/end, intersecting"
+8dc55e8d130ea293,3,FAIL,19,162.53,"start/end, disconnected, intersecting"
+e090440b02df7219,3,FAIL,11,121.42,rules
+f758efc83c595b04,3,FAIL,17,101.86,None
+ac7626649901d917,5,FAIL,24,171.83,"disconnected, intersecting, rules"
+cb28e0534aa0b063,2,FAIL,11,162.66,"disconnected, rules"
+b7b14b2fbd23c24b,1,FAIL,12,126.07,None
+f7c670905617d0e2,3,FAIL,13,143.53,"disconnected, rules"
+cc060a01c6f06fab,1,FAIL,9,162.33,rules
+a8a6d541abcb65e9,5,FAIL,12,132.64,None
+703d0229f69d6415,5,FAIL,26,132.53,disconnected
+608f0139a3c6e1de,3,FAIL,18,131.17,None
+83e85cc51ea9b2fb,5,FAIL,16,123.86,rules
+899bbb366dc44689,3,FAIL,15,147.31,rules
+c8b18eeabcd973f1,1,FAIL,19,143.67,None
+da30abc42943f24c,3,FAIL,9,136.29,None
+e399bce353272491,5,FAIL,4,140.13,None
+7306458c0105872e,5,FAIL,10,141.27,None
+e605eb2515ac4bfe,5,FAIL,9,90.51,None
+2f52e830064190c4,1,FAIL,11,137.51,None
+226fd6aa76fd90b5,3,FAIL,35,191.56,"intersecting, rules"
+70bb35cbdc82f22d,4,FAIL,39,186.70,"start/end, intersecting, rules"
+c92372bd94215032,3,FAIL,8,119.34,None
+7490b794631b985e,5,FAIL,23,142.17,None
+82877e44b5aa0795,1,FAIL,16,150.56,intersecting
+5f0427651d0b984c,2,FAIL,10,119.92,None
+a6aca58a3edafcc2,3,FAIL,18,188.17,"disconnected, intersecting, rules"
+b9f806a3aba3a370,5,FAIL,18,196.78,"start/end, disconnected, intersecting"
+6663c8ddf3565b3f,5,FAIL,19,168.68,rules
+df855ae9d3a12db5,2,FAIL,35,152.28,"intersecting, rules"
+fea07309116da353,3,FAIL,10,122.40,None
+10aae2671ff44dc2,5,FAIL,28,162.98,None
+b40b772a9ef00980,1,PASS,8,84.09,None
+cf9dfd87180659b,4,FAIL,19,151.00,None
+c2f1726c32030b96,2,FAIL,8,143.89,None
+51b9bb5cdf4abfef,3,FAIL,32,166.82,intersecting
+820399c7eebb39c2,3,FAIL,9,72.67,None
+58fff3d41575caab,4,FAIL,54,178.53,"intersecting, rules"
+fed3e5eff97750d6,2,FAIL,14,163.07,None
+fa1114b465eb178,2,FAIL,15,140.64,None
+611f87b14c17edb2,4,FAIL,7,144.39,start/end
+d182949e859cba4f,2,FAIL,24,130.64,disconnected
+cdb63ede036474c5,4,FAIL,20,153.27,disconnected
+851fd63e172dbba0,4,FAIL,2,97.08,None
+4de04b3c4d15b5d5,3,FAIL,22,124.99,None
+95916b71a3f794ff,2,FAIL,14,129.90,None
+e960398c9fbd29fe,3,FAIL,7,130.86,disconnected
+9a5dbca10f5418db,2,FAIL,7,119.77,None
+857ae50f99d9f3ac,2,FAIL,14,154.50,rules
+a2106593071eb66a,4,FAIL,21,132.31,None
+95fc27b34533357d,5,FAIL,13,128.96,disconnected
+27a3f4a05594287b,2,FAIL,9,168.51,None
+8676d8ef338255d2,4,FAIL,12,160.18,None
+519594536d60e115,2,FAIL,23,91.32,None
+cecbbabf056d148c,3,FAIL,11,90.25,None
+9cddf98975ee77a2,3,FAIL,16,121.77,None
+969355c609397327,4,FAIL,13,167.40,disconnected
+92e56e8b713d5c9d,5,FAIL,13,123.90,None
+13363083e52f42ac,5,FAIL,4293,316.69,"start/end, intersecting"
+d22b1d7fd116be8b,3,FAIL,20,160.69,rules
+1bf8d47b32b9b719,3,FAIL,23,148.37,None
+d170cc270db4f272,1,FAIL,24,178.20,"disconnected, intersecting, rules"
+8f1f819d287a3bb2,4,FAIL,2,328.91,disconnected
+e10bd3e5d6963967,3,FAIL,11,89.23,None
+5b6ee1f3e4e114a7,3,FAIL,7,153.70,None
+2691c37dd4b921ae,4,FAIL,25,186.90,None
+1d13ef360a0d5ca5,1,FAIL,18,112.40,disconnected
+1f85eacd72d02d23,5,FAIL,15,147.98,None
+9b274fcf3ed44212,1,FAIL,9,113.25,None
+df15fe6ed4dd7df0,3,FAIL,14,162.71,None
+52df57cc84fbc153,5,FAIL,21,114.79,None
+cef4eaa4525b4d4a,1,FAIL,11,172.44,rules
+2cdfbd4a9f364513,2,FAIL,13,170.69,None
+1ef0bc42f42911b,5,FAIL,10,119.07,None
+c94de1c651355827,3,FAIL,9,146.89,None
+5faeb260f219d74a,3,FAIL,6,147.31,start/end
+f50e2570d6d028f4,3,FAIL,21,162.39,"start/end, intersecting, rules"
+8c2ad5e4cfbbc016,4,FAIL,42,180.13,"start/end, intersecting, rules"
+dea5ab3b33019569,4,FAIL,18,173.39,start/end
+22f2c48bcc4ce64f,2,FAIL,9,107.08,None
+6be507c084e691cb,2,FAIL,19,135.93,None
+7952d255b6ea209c,4,FAIL,26,131.53,start/end
+ebcbfd4fa2867c42,2,FAIL,3,106.20,None
+3a6ba4ffd84fc4c1,5,FAIL,12,84.87,None
+93a638921305725f,4,FAIL,9,131.45,None
+8ea34b6d23b4761e,2,FAIL,17,111.29,rules
+88fa0972b417c260,5,FAIL,30,129.08,None
+6eab214d450d4dbe,4,FAIL,17,119.20,None
+66af5fa2c849be82,4,FAIL,16,114.97,start/end
+3b9f7395fef14327,5,FAIL,17,131.82,None
+f8999f1ddbc4e969,2,FAIL,14,132.41,None
+8d5f970e2d32d4eb,3,FAIL,14,98.83,None
+2ba08168d4f94e2f,3,FAIL,10,118.96,start/end
+442360e781344ca6,3,FAIL,16,167.74,disconnected
+293100f44e836546,3,PASS,15,139.14,None
+4d7a1a66baaf63ae,2,FAIL,3,164.38,None
+f6b6da2cfd79bf8d,4,FAIL,84,161.37,"start/end, intersecting, rules"
+f92812f4de72ff65,2,FAIL,26,129.54,"intersecting, rules"
+6309fe9234408d09,3,FAIL,13,133.62,disconnected
+fcddbcaebe33803e,5,FAIL,2,165.39,None
+51464a9c8a314377,5,FAIL,19,167.83,"disconnected, rules"
+a4bf7550aba66cda,1,FAIL,19,153.40,intersecting
+a022c119975a7c52,3,FAIL,14,176.71,start/end
+1a068875a3e6faef,2,FAIL,13,120.23,None
+4fe157e88b75d1c6,4,FAIL,15,140.68,None
+39e018c085e923c6,4,FAIL,16,111.88,None
+f8e018c187532e55,2,FAIL,3,111.28,None
+209102523fe9cb33,3,PASS,13,129.29,None
+1a54d6e78eb31f57,3,FAIL,7,104.22,None
+9725866ac2281eec,4,FAIL,15,176.04,None
+6bd50bbc57f0da07,3,FAIL,26,179.22,rules
+dee9e7fb15309f84,2,FAIL,13,140.04,None
+86902220d12d703f,4,FAIL,15,167.06,None
+4eb57609ef1ee631,1,FAIL,9,172.38,None
+2f79e45518965eb9,4,FAIL,17,161.24,intersecting
+56d5533533454616,4,FAIL,14,123.50,None
+49e1d44abd319766,5,FAIL,19,157.97,rules
+b4236ee204ca4ebd,1,FAIL,12,148.11,None
+bd50007a27ec4c42,5,PASS,9,151.42,None
+46e5ace860a947c,5,FAIL,31,144.49,disconnected
+65de230f331a4c45,3,FAIL,17,70.20,None
+208cf4346af75ddb,1,FAIL,15,101.21,disconnected
+90fd5c8fc5c892bc,2,FAIL,12,100.28,None
+451e601ab40d68ce,3,FAIL,3,104.49,None
+c57d2afd719e3f0a,2,FAIL,20,132.15,None
+788033d48bdb93a4,2,FAIL,9,114.29,None
+1ea856e2b1a1fe37,2,FAIL,13,126.60,None
+ce2b4e5ce355a816,1,PASS,11,62.51,None
+a8367944d1ed9ac,5,FAIL,11,169.85,rules
+afa4e2bcc5412771,2,FAIL,11,130.61,None
+fe0ba1ad7aff48c5,1,PASS,3,117.83,None
+e776bbdf9faf8a36,3,FAIL,10,151.98,None
+1b3d9f4f52d85b56,2,FAIL,23,140.73,"intersecting, rules"
+b142fbbeb41041b7,5,FAIL,27,139.19,"start/end, intersecting, rules"
+5f53135de8b1954a,2,FAIL,22,176.69,intersecting
+62c72bfb2683d204,5,FAIL,42,153.96,disconnected
+6f9050409662ade1,1,FAIL,15,130.34,None
+5ad45782c4d247fd,3,FAIL,4,66.37,None
+ad84c6fc0204a477,2,PASS,25,120.76,None
+6f26802c8e80c94b,2,FAIL,11,141.72,None
+2a959752e36b0310,3,FAIL,15,106.80,disconnected
+8ce6a69f4a2bf7f8,1,FAIL,14,98.54,None
+a388bae91e3687fc,1,PASS,15,143.37,None
+52a0c371bcb62cb9,1,PASS,12,91.52,None
+307a49ad7e092e92,1,FAIL,11,123.62,disconnected
+a75d02e340d80895,4,FAIL,15,122.54,None
+dfc4068c3d885844,3,FAIL,17,106.86,rules
+8ab3bd25684da05b,4,FAIL,15,94.84,disconnected
+14cfe9b24820e86d,3,FAIL,39,172.37,intersecting
+44be3c34e106de01,3,FAIL,12,131.78,None
+6515cfe93ce509e,3,FAIL,21,113.49,disconnected
+97a8f474dbded2a7,5,FAIL,27,162.43,"disconnected, rules"
+723c768ba214cf52,3,FAIL,6,145.08,None
+45119a0d8ec60ee4,4,PASS,7,170.44,None
+f10cb5a22d358c0e,4,FAIL,18,159.81,None
+7f0b58b125996cef,1,PASS,9,123.35,None
+d891fc0de00c39ae,4,FAIL,15,170.20,disconnected
+f92885c46014bd68,1,PASS,21,109.08,None
+d276fc6b3d2511e2,1,FAIL,16,167.67,intersecting
+fab463aae2041518,1,FAIL,13,106.43,disconnected
+de3e9c0b4fe6d32e,5,FAIL,14,141.43,disconnected
+c42545022c2f958a,2,FAIL,14,84.37,"start/end, rules"
+5bd4eba15bbb1174,3,FAIL,9,134.91,None
+77078b45b62cd8dc,2,FAIL,34,145.99,"intersecting, rules"
+9dd10d6188ee053c,5,FAIL,12,110.09,None
+e6f85b7321c058cc,4,FAIL,15,92.90,None
+15ba4ccf6e2bee00,4,FAIL,16,91.23,None
+81b285fa0fa2bafa,3,FAIL,37,138.11,"intersecting, rules"
+42bfcaee82187611,4,FAIL,8,113.76,disconnected
+51d09f953078db61,4,FAIL,35,156.08,"start/end, disconnected, rules"
+199107ddf5bc64ff,5,FAIL,16,115.47,None
+437a193bf1a65f04,5,FAIL,17,139.49,rules
+36cb3f329a6ce01d,1,FAIL,20,108.38,None
+afae70e7d540f75d,4,FAIL,8,142.76,rules
+a59bf17b740b01fd,5,FAIL,35,157.58,"disconnected, intersecting, rules"
+51acec8bf877a466,4,FAIL,20,159.48,"intersecting, rules"
+9ca09c7a868983eb,1,FAIL,22,123.48,rules
+d419f8fbaf6fe22,1,FAIL,9,87.19,None
+ed8737f58ab6b01e,3,FAIL,15,127.03,None
+3b1efff9d208e60e,2,FAIL,8,54.28,None
+60177fc9cf98665a,2,FAIL,18,150.99,"intersecting, rules"
+bad1eb90a6a08dc,1,FAIL,17,174.59,disconnected
+88575fccc666f7e9,3,FAIL,15,138.91,None
+e6d6869b96602d91,2,FAIL,24,92.14,disconnected
+11f8795deb4f8d00,1,FAIL,23,79.31,rules
+f38d151800d3189a,5,FAIL,16,106.75,None
+cd651b4721caf15d,1,FAIL,15,98.88,rules
+6eef43a6cfab1403,4,FAIL,17,144.03,None
+a93c03fb9b3377af,1,PASS,11,74.63,None
+cff5599c6dd870f0,3,FAIL,14,128.66,disconnected
+8be533948462dbe,1,FAIL,16,99.91,disconnected
+81ba60816ec3caf4,3,FAIL,10,176.92,None
+a6aa8422fc61f5fc,3,FAIL,12,145.68,None
+483600d86a04ce7e,1,PASS,7,73.14,None
+3cfa2d64b8faa4bf,5,FAIL,22,134.00,None
+50f54de4937b3599,4,FAIL,13,108.44,None
+ba52f869c61f21b5,3,FAIL,13,121.10,start/end
+24289a0f9096e6a7,1,FAIL,7,89.69,None
+ceb9b6e07d83a8f2,3,FAIL,16,99.07,None
+9d48e5c940285cc1,4,FAIL,45,174.88,"intersecting, rules"
+cd5fcbab6212d1d3,2,FAIL,10,58.20,None
+37511cf28410d02d,5,FAIL,21,115.71,"start/end, intersecting, rules"
+9bd62a0dce10434d,1,FAIL,14,172.63,rules
+5a0358b2f517c242,3,FAIL,13,118.43,None
+7f017c48853b5bdf,5,FAIL,31,174.26,"start/end, rules"
+c3d39f83080c2be0,2,FAIL,3,133.70,None
+d15996d3b19a7b89,4,FAIL,19,129.60,None
+5e7cbdd4ea58a968,3,FAIL,12,122.49,None
+2ec21f80d299308c,5,FAIL,14,112.75,None
+2e3e77529092e4d8,2,FAIL,21,158.11,"start/end, intersecting, rules"
+3026e4c4c27a1245,2,FAIL,26,166.12,"start/end, disconnected, intersecting"
+752ad13bb02edb78,2,FAIL,15,118.40,rules
+4fea7fa61194564d,1,FAIL,7,84.39,None
+71d86556e76ad543,2,FAIL,14,92.67,None
+491bb36b613e4e47,5,FAIL,23,169.72,"intersecting, rules"
+40693c9b829f7c9,1,FAIL,7,116.87,None
+474da419ac055d71,3,FAIL,21,158.03,"disconnected, intersecting, rules"
+e804a2b9ef415dc,2,FAIL,24,165.10,"intersecting, rules"
+be13f5d153641d08,2,FAIL,16,100.89,disconnected
+645beb1e8decfea4,3,FAIL,14,139.69,None
+2ae4ce9e092ca6e7,3,FAIL,14,161.55,None
+78ddc0c26cafd04c,5,FAIL,14,136.14,None
+19cf04310fb0f101,4,FAIL,21,175.66,None
+6fff75b605783aaf,2,FAIL,15,151.60,None
+c7cc3a12411b96b7,3,PASS,13,129.72,None
+b3a09d3b16798194,1,FAIL,24,144.61,rules
+e9f72a3f25af192,4,FAIL,20,103.70,start/end
+4103547582f7c52f,2,FAIL,5,142.71,None
+8b20514e6e30759,4,FAIL,17,96.98,"start/end, rules"
+1c88380f6e6ff078,1,FAIL,5,149.42,None
+40cac0c85d57352c,2,FAIL,17,157.02,None
+2bcd973446d31c7c,3,FAIL,11,141.34,disconnected
+3b022960e0952ea6,1,PASS,16,107.71,None
+af273e8037137f53,3,FAIL,6,142.29,None
+f40072aa3a377063,1,FAIL,16,182.99,intersecting
+bfafe8fa302355fe,2,FAIL,11,100.94,start/end
+71cda8beb94a1e5,4,FAIL,25,181.12,"start/end, intersecting, rules"
+e7139fb59fd50480,2,FAIL,12,121.19,None
+5b1fec7314b29551,4,FAIL,31,152.60,"start/end, intersecting"
+7af275888f0be7d4,5,FAIL,15,148.54,None
+5b13733bc4bcb00e,3,FAIL,26,167.31,"intersecting, rules"
+e0f69178ae50095b,4,FAIL,24,150.36,disconnected
+f720ec5ea886eaf3,1,FAIL,17,172.14,"disconnected, intersecting"
+bf4fd850fc72f25b,2,FAIL,11,128.47,None
+d30a1b2a8c6477a0,5,FAIL,28,113.31,"start/end, rules"
+5706655e3f23093f,5,FAIL,18,102.71,None
+41c32cabac723b4f,2,FAIL,2,132.84,None
+b34d5b604e28b5dd,2,FAIL,20,129.44,None
+c457ef85e50b1c07,1,PASS,21,122.30,None
+4bd84e4ceca9ecfd,2,FAIL,28,124.50,"intersecting, rules"
+cbe1e0098658043a,3,FAIL,19,127.47,None
+862a69c8aaae8b50,3,FAIL,8,149.44,"disconnected, intersecting"
+4cc3f931805bb756,3,FAIL,15,173.60,intersecting
+3ae48cafadebb0d0,4,FAIL,15,132.47,None
+804263863cd097a,2,FAIL,20,174.90,intersecting
+8f4d93a46b78c478,2,FAIL,12,162.23,None
+20511a9f2db0ff9b,2,FAIL,12,141.67,rules
+ab752f1f9da8f654,2,FAIL,9,129.32,None
+ae5679acd7f28fd1,4,FAIL,20,138.51,None
+bfa8b40b956dcb3,1,FAIL,26,165.16,None
+d5946da1a06e3e22,4,FAIL,3,129.34,None
+fbe37e40106ef25f,4,FAIL,19,144.48,None
+2d269a6bdf9d69bf,1,FAIL,2,132.46,None
+e8e25a93e5e45009,5,FAIL,19,147.54,None
+225d82499bcf63c1,2,FAIL,7,137.62,None
+6717286bb4b420f6,1,FAIL,14,184.21,None
+cd584a0c52a16fb,1,FAIL,7,54.04,None
+96fc153ae5995301,2,FAIL,16,119.68,None
+44d322a3010f2431,5,FAIL,16,153.87,None
+65417b2dd681e9c1,2,FAIL,25,154.59,None
+227ecc17b26ed625,1,FAIL,14,98.47,None
+9cf124fbc3977211,5,FAIL,46,136.37,"intersecting, rules"
+1d078c743d8f1d61,3,FAIL,13,122.08,None
+a4c23371c36c8274,1,PASS,22,133.51,None
+64b43a2733ea8b0,4,FAIL,13,185.25,None
+37655434b1874fdf,2,FAIL,29,183.66,"disconnected, intersecting"
+7a79f99ecc0bd399,1,FAIL,20,155.89,"intersecting, rules"
+fa6b6ae14dba028d,3,FAIL,14,132.08,None
+9cd4e57e1d270f05,2,FAIL,18,95.29,disconnected

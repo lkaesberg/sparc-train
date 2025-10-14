@@ -3,7 +3,7 @@
 #SBATCH --partition=scc-gpu
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
-#SBATCH --nodes=2
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1   
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 32
@@ -24,9 +24,9 @@ source activate vllm
 #   Ensure the SBATCH -N equals TRAIN_NODE_COUNT + VLLM_NODE_COUNT
 
 # Central model selection (override by exporting MODEL_NAME before sbatch)
-MODEL_NAME=${MODEL_NAME:-Qwen/Qwen3-0.6B}
+MODEL_NAME=${MODEL_NAME:-lkaesberg/Qwen3-32B-SPaRC-GRPO}
 echo "Model: ${MODEL_NAME}"
-RUN_NAME_ADDITION=${RUN_NAME_ADDITION:-""}
+RUN_NAME_ADDITION=${RUN_NAME_ADDITION:-"8epoch"}
 
 # Discover allocated hosts
 NODELIST=( $(scontrol show hostnames ${SLURM_JOB_NODELIST}) )
