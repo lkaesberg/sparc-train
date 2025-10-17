@@ -258,7 +258,7 @@ def main():
         num_generations=4,
         num_train_epochs=4,
         # Built-in weighting of multiple reward functions
-        reward_weights=[1.0, 0.25, 0.25, 0.25, 0.25, 0.1],
+        reward_weights=[1.0, 0.1, 0.1, 0.1, 0.1, 0.01],
         scale_rewards=False,
         loss_type="dr_grpo"
     )
