@@ -48,19 +48,47 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
     def reward_perfect_solution(completions, prompts, **kwargs):
         rewards_local: List[float] = []
         for completion, prompt in zip(completions, prompts):
+            print("--------------------------------")
+            print("completion")
+            print(completion)
+            print("--------------------------------")
+            print("prompt")
+            print(prompt)
+            print("--------------------------------")
             prompt_text, completion_text = _normalize_texts(completion, prompt)
+            print("prompt_text")
+            print(prompt_text)
+            print("--------------------------------")
+            print("completion_text")
+            print(completion_text)
+            print("--------------------------------")
             puzzle = prompt_to_puzzle.get(prompt_text)
+            print("puzzle")
+            print(puzzle)
+            print("--------------------------------")
             if puzzle is None:
                 rewards_local.append(0.0)
                 continue
+            print("completion_text")
+            print(completion_text)
+            print("--------------------------------")
             try:
                 extracted_path = extract_solution_path(completion_text, puzzle)
+                print("extracted_path")
+                print(extracted_path)
+                print("--------------------------------")
                 if extracted_path is not None and validate_solution(extracted_path, puzzle):
                     rewards_local.append(1.0)
                 else:
                     rewards_local.append(0.0)
             except Exception:
+                print("Exception")
+                print(e)
+                print("--------------------------------")
                 rewards_local.append(0.0)
+        print("rewards_local")
+        print(rewards_local)
+        print("--------------------------------")
         if is_main and len(rewards_local) > 0 and wandb.run is not None:
             wandb.log({"rewards/perfect_mean": sum(rewards_local) / len(rewards_local)})
         return rewards_local
