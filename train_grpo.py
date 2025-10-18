@@ -19,7 +19,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
     """
     prompt_to_puzzle: Dict[str, Dict[str, Any]] = {}
     for example in original_examples:
-        prompt_text = generate_prompt(example)
+        prompt_text = generate_prompt(example).strip()
         prompt_to_puzzle[prompt_text] = example
 
     is_main = PartialState().is_main_process
@@ -206,7 +206,7 @@ def build_sparc_reward_functions(original_examples: List[Dict[str, Any]]):
 
 def to_grpo_prompt_format(dataset: Dataset) -> Dataset:
     def _map_fn(ex):
-        prompt = generate_prompt(ex)
+        prompt = generate_prompt(ex).strip()
         system_msg = (
             "Use <think>...</think> to reason privately. Keep thinking concise. "
             "After thinking, output ONLY the final SPaRC path in the exact format '####(x0,y0)->(x1,y1)->...'. "
