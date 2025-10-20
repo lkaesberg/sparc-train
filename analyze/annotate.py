@@ -31,7 +31,7 @@ import re
 import sys
 from typing import List, Optional
 
-import requests
+import openai
 
 from sparc.prompt import generate_prompt
 
@@ -150,28 +150,40 @@ def build_prompt(sample: dict, categories: List[str], last_n: int) -> str:
     return prompt
 
 
-def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60) -> Optional[str]:
-    url = f"http://127.0.0.1:{port}/v1/chat/completions"
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 512,
-        "temperature": 0.0,
-    }
+def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_key: Optional[str] = None) -> Optional[str]:
+    """
+    Call the local OpenAI-compatible vLLM using the openai Python library.
+
+    This sets openai.api_base to the local server (e.g. http://127.0.0.1:8000/v1)
+    and openai.api_key to the provided api_key (or empty string for anonymous).
+    """
+    base = f"http://127.0.0.1:{port}/v1"
+    openai.api_base = base
+    # vLLM typically doesn't require an API key for local usage; set empty string
+    # when none provided so the openai client still sends a Bearer header (if any).
+    openai.api_key = api_key or ""
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        # vLLM OpenAI-compat returns choices[0].message.content
-        if "choices" in data and data["choices"]:
-            return data["choices"][0]["message"]["content"]
-        # fallback: try text
-        if "output" in data:
-            return data["output"]
+        resp = openai.ChatCompletion.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=512,
+            temperature=0.0,
+        )
+        # openai lib returns a dict-like response; try to extract message content
+        if resp and "choices" in resp and resp["choices"]:
+            choice = resp["choices"][0]
+            # new-style: choice["message"]["content"]
+            if isinstance(choice, dict) and "message" in choice and "content" in choice["message"]:
+                return choice["message"]["content"]
+            # fallback: string content in 'text' or 'output'
+            if "text" in choice:
+                return choice["text"]
+        # fallback for other shapes
+        if hasattr(resp, "get") and resp.get("output"):
+            return resp.get("output")
         return None
     except Exception as e:
-        print(f"Error calling vLLM: {e}", file=sys.stderr)
+        print(f"Error calling vLLM (openai): {e}", file=sys.stderr)
         return None
 
 
@@ -225,7 +237,7 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
             prompt = build_prompt(sample, categories, last_n)
             raw = call_vllm(prompt, model=model, port=port)
             if raw is None:
-                ann = {"categories": [1], "explanation": "vllm_error_forced_choice"}
+                ann = {"categories": [-1], "explanation": "vllm_error_forced_choice"}
             else:
                 parsed = parse_llm_response(raw, num_categories=len(categories))
                 ann = parsed
