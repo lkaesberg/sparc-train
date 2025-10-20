@@ -40,7 +40,7 @@ module load gcc/13.2.0 || true
 module load cuda/12.6.2 || true
 source activate vllm
 
-LOG_FILE="logs/vllm_annotate_${SLURM_JOB_ID:-$$}.log"
+LOG_FILE="results/annotate/logs/vllm_annotate_${SLURM_JOB_ID:-$$}.log"
 echo "Starting vLLM server (model=$MODEL) -> $LOG_FILE"
 python -u -m vllm.entrypoints.openai.api_server \
   --model "$MODEL" \
