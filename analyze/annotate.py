@@ -145,8 +145,6 @@ def build_prompt(sample: dict, categories: List[str], last_n: int) -> str:
         f"{cat_lines}\n\n"
         "Answer as valid JSON ONLY, e.g. {\"categories\": [1,3], \"explanation\": \"...\"}."
     )
-    print("=== Prompt ===")
-    print(prompt)
     return prompt
 
 
@@ -202,11 +200,11 @@ def parse_llm_response(text: str, num_categories: int) -> dict:
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end < start:
-        return {"categories": [1], "explanation": f"failed_to_parse_raw_response: {text}"}
+        return {"categories": [-2], "explanation": f"failed_to_parse_raw_response: {text}"}
     try:
         obj = json.loads(text[start:end+1])
     except Exception:
-        return {"categories": [1], "explanation": f"failed_to_json_parse: {text}"}
+        return {"categories": [-3], "explanation": f"failed_to_json_parse: {text}"}
 
     # If the model provided a 'categories' array, validate and return it (allow empty)
     if "categories" in obj:
