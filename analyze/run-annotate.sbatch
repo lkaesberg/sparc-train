@@ -55,7 +55,7 @@ python -u -m vllm.entrypoints.openai.api_server \
 SERVER_PID=$!
 
 # Wait for server readiness
-for i in {1..300}; do
+for i in {1..3600}; do
   if curl -s "http://127.0.0.1:${PORT}/v1/models" >/dev/null; then
     echo "vLLM ready"
     break

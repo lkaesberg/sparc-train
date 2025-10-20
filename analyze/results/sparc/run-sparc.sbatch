@@ -78,7 +78,7 @@ trap cleanup EXIT INT TERM
 # 4 · Health probe (wait until /v1/models responds)
 ###############################################################################
 echo -n "⌛ Waiting for vLLM to become ready"
-for _ in {1..600}; do
+for _ in {1..3600}; do
   if curl -s "http://127.0.0.1:${PORT}/v1/models" >/dev/null; then
     echo " … ready."
     break
