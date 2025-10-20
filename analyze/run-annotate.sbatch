@@ -8,6 +8,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --mem=32G
 #SBATCH -c 4
+#SBATCH -C inet
 #SBATCH --output=results/annotate/logs/%x-%j.out
 #SBATCH --error=results/annotate/logs/%x-%j.out
 
