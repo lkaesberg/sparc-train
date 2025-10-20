@@ -31,7 +31,7 @@ import re
 import sys
 from typing import List, Optional
 
-import openai
+from openai import OpenAI
 
 from sparc.prompt import generate_prompt
 
@@ -158,32 +158,46 @@ def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_
     and openai.api_key to the provided api_key (or empty string for anonymous).
     """
     base = f"http://127.0.0.1:{port}/v1"
-    openai.api_base = base
-    # vLLM typically doesn't require an API key for local usage; set empty string
-    # when none provided so the openai client still sends a Bearer header (if any).
-    openai.api_key = api_key or ""
+    # Create a client instance for OpenAI >=1.0.0
     try:
-        resp = openai.ChatCompletion.create(
+        client = OpenAI(api_key=api_key or "", api_base=base)
+    except Exception:
+        # Fallback to default constructor if signature differs
+        client = OpenAI()
+        client.api_key = api_key or ""
+        client.api_base = base
+
+    try:
+        # Use the new client.chat.completions.create interface
+        resp = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=512,
             temperature=0.0,
         )
-        # openai lib returns a dict-like response; try to extract message content
-        if resp and "choices" in resp and resp["choices"]:
-            choice = resp["choices"][0]
-            # new-style: choice["message"]["content"]
-            if isinstance(choice, dict) and "message" in choice and "content" in choice["message"]:
-                return choice["message"]["content"]
-            # fallback: string content in 'text' or 'output'
-            if "text" in choice:
-                return choice["text"]
-        # fallback for other shapes
-        if hasattr(resp, "get") and resp.get("output"):
-            return resp.get("output")
-        return None
+        # Extract content safely
+        if resp and hasattr(resp, "get") and resp.get("choices"):
+            ch = resp.get("choices")[0]
+            # choice may be a mapping-like object
+            if isinstance(ch, dict):
+                msg = ch.get("message") or {}
+                if isinstance(msg, dict) and "content" in msg:
+                    return msg.get("content")
+                if "text" in ch:
+                    return ch.get("text")
+            else:
+                # try attribute access
+                try:
+                    return ch.message.content
+                except Exception:
+                    pass
+        # fallback
+        try:
+            return resp.output
+        except Exception:
+            return None
     except Exception as e:
-        print(f"Error calling vLLM (openai): {e}", file=sys.stderr)
+        print(f"Error calling vLLM (openai client): {e}", file=sys.stderr)
         return None
 
 
