@@ -8,8 +8,8 @@
 #SBATCH --time=04:00:00
 #SBATCH --mem=32G
 #SBATCH -c 4
-#SBATCH --output=analyze/results/annotate/logs/%x-%j.out
-#SBATCH --error=analyze/results/annotate/logs/%x-%j.out
+#SBATCH --output=results/annotate/logs/%x-%j.out
+#SBATCH --error=results/annotate/logs/%x-%j.out
 
 set -euo pipefail
 
@@ -28,10 +28,10 @@ fi
 
 if [[ -z "$OUTPUT" ]]; then
   BASENAME=$(basename "$INPUT" .jsonl)
-  OUTPUT="analyze/results/annotate/${BASENAME}.annotated.jsonl"
+  OUTPUT="results/annotate/${BASENAME}.annotated.jsonl"
 fi
 
-mkdir -p analyze/results/annotate
+mkdir -p results/annotate
 mkdir -p logs
 
 # Start vLLM server in the `vllm` conda env. Keep CUDA modules if available.
@@ -63,7 +63,7 @@ echo "Running annotator: input=$INPUT output=$OUTPUT model=$MODEL port=$PORT las
 # Run annotator under the `sparc` conda env (required for `sparc.generate_prompt`).
 conda deactivate 2>/dev/null || true
 source activate sparc || true
-python analyze/annotate.py --input "$INPUT" --output "$OUTPUT" --model "$MODEL" --port $PORT --last-n-sentences $LAST_N_SENTENCES
+python annotate.py --input "$INPUT" --output "$OUTPUT" --model "$MODEL" --port $PORT --last-n-sentences $LAST_N_SENTENCES
 
 # cleanup: politely stop server and wait a short time
 if kill -0 $SERVER_PID 2>/dev/null; then
