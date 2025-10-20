@@ -1,53 +1,5 @@
 #!/usr/bin/env bash
-###############################################################################
-# SBATCH helper to run annotation: starts a local vLLM server and runs the
-# `analyze/annotate.py` script against a JSONL result file. Results are saved
-# to analyze/results/annotate/<basename>.annotated.jsonl
-#
-# Usage (examples):
-# sbatch analyze/run-annotate.sbatch --input analyze/results/sparc/myfile.jsonl --categories analyze/categories.txt
-# or set environment variables INPUT/OUTPUT/CATEGORIES when calling sbatch.
-###############################################################################
-#SBATCH --job-name=sparc-annotate
-#SBATCH --partition=scc-gpu
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --gres=gpu:A100:1
-#SBATCH --time=04:00:00
-#SBATCH --mem=32G
-#SBATCH -c 4
-#SBATCH --output=analyze/results/annotate/%x-%j.out
-#SBATCH --error=analyze/results/annotate/%x-%j.err
 
-set -euo pipefail
-
-# defaults (can be overridden via env or sbatch --export)
-INPUT="${INPUT:-}"
-OUTPUT="${OUTPUT:-}"
-CATEGORIES="${CATEGORIES:-analyze/categories.txt}"
-MODEL="${MODEL:-lkaesberg/Qwen3-14B-SPaRC-GRPO-8E}"
-PORT="${LLM_PORT:-8000}"
-
-if [[ -z "$INPUT" ]]; then
-  echo "ERROR: INPUT not set. Provide --input <file.jsonl> or set INPUT env var." >&2
-  exit 1
-fi
-
-#!/usr/bin/env bash
-###############################################################################
-# SBATCH helper to run annotation: starts a local vLLM server and runs the
-# `analyze/annotate.py` script against a JSONL result file. Results are saved
-# to analyze/results/annotate/<basename>.annotated.jsonl
-#
-# Usage examples:
-# sbatch analyze/run-annotate.sbatch --input analyze/results/sparc/myfile.jsonl
-# or set environment variables INPUT/OUTPUT when calling sbatch.
-#
-# Notes:
-# - The vLLM server runs in the `vllm` conda environment.
-# - The annotator runs in the `sparc` conda environment (required for
-#   `sparc.generate_prompt`).
-###############################################################################
 #SBATCH --job-name=sparc-annotate
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=1
