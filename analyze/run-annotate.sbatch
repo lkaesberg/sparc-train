@@ -6,8 +6,8 @@
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:A100:4
 #SBATCH --time=04:00:00
-#SBATCH --mem=32G
-#SBATCH -c 4
+#SBATCH --mem=128G
+#SBATCH -c 32
 #SBATCH -C inet&80gb
 #SBATCH --output=results/annotate/logs/%x-%j.out
 #SBATCH --error=results/annotate/logs/%x-%j.out
@@ -38,9 +38,6 @@ fi
 mkdir -p results/annotate
 mkdir -p logs
 
-# Start vLLM server in the `vllm` conda env. Keep CUDA modules if available.
-module load gcc/13.2.0 || true
-module load cuda/12.6.2 || true
 source activate vllm
 
 LOG_FILE="results/annotate/logs/vllm_annotate_${SLURM_JOB_ID:-$$}.log"
@@ -66,9 +63,6 @@ done
 echo
 echo "Running annotator: input=$INPUT output=$OUTPUT model=$MODEL port=$PORT last_n=$LAST_N_SENTENCES"
 
-# Run annotator under the `sparc` conda env (required for `sparc.generate_prompt`).
-conda deactivate 2>/dev/null || true
-source activate sparc || true
 python annotate.py --input "$INPUT" --output "$OUTPUT" --model "$MODEL" --port $PORT --last-n-sentences $LAST_N_SENTENCES
 
 # cleanup: politely stop server and wait a short time
