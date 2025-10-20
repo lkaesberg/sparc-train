@@ -1,10 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+###############################################################################
+# SBATCH wrapper for distributed GRPO training.
+# Assumes a pre-created "vllm" environment is available on compute nodes
+# (activate with: `source activate vllm`).
+###############################################################################
 #SBATCH --job-name=sparc-grpo
 #SBATCH --partition=scc-gpu
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=1   
+#SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 32
 #SBATCH -C inet&80gb
@@ -14,6 +19,7 @@
 module load gcc/13.2.0
 module load cuda/12.6.2
 
+# Activate the vllm environment (cluster-provided)
 source activate vllm
 
 #

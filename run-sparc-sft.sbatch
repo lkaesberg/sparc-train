@@ -1,10 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+###############################################################################
+# SBATCH wrapper for Supervised Fine-Tuning (SFT).
+# Standardized to use the shared `vllm` environment. If you prefer a separate
+# environment named `sparc`, change the `source activate` line below.
+###############################################################################
 #SBATCH --job-name=sparc-sft
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:A100:4
-#SBATCH --time=48:00:00 
+#SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH -c 32
 #SBATCH -C inet&80gb

@@ -1,10 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+###############################################################################
+# SBATCH wrapper for PPO training.
+# Uses the shared `vllm` environment on compute nodes (activate with
+# `source activate vllm`).
+###############################################################################
 #SBATCH --job-name=sparc-ppo
 #SBATCH --partition=scc-gpu
 #SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH --nodes=2
-#SBATCH --ntasks-per-node=1   
+#SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:A100:4       # 4 GPUs per node
 #SBATCH -c 32
 #SBATCH -C inet&80gb

@@ -1,0 +1,14 @@
+name: vllm
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.11
+  - pip
+  - cudatoolkit>=12.1
+  - pip:
+    - vllm[serve]
+    - trl[vllm]
+    - sparc-puzzle
+    - psutil
+    - "flash_attn"  # pin or replace with a wheel if your cluster provides one

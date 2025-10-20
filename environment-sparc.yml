@@ -1,0 +1,15 @@
+name: sparc
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - sparc-puzzle
+    - accelerate
+    - deepspeed
+    - trl
+    - wandb
+    - pandas
+    - psutil
+    - "flash_attn"
