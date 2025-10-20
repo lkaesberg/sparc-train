@@ -35,6 +35,9 @@ from openai import OpenAI
 
 from sparc.prompt import generate_prompt
 
+# Global client to avoid reinitializing on every call
+_vllm_client = None
+
 
 def load_categories(path: str) -> List[str]:
     with open(path, "r", encoding="utf-8") as f:
@@ -148,46 +151,47 @@ def build_prompt(sample: dict, categories: List[str], last_n: int) -> str:
     return prompt
 
 
+def get_vllm_client(port: int = 8000, api_key: Optional[str] = None) -> OpenAI:
+    """
+    Get or create a singleton OpenAI client for vLLM.
+    Reuses the client across calls to avoid overhead.
+    """
+    global _vllm_client
+    if _vllm_client is None:
+        base = f"http://127.0.0.1:{port}/v1"
+        key = api_key or "EMPTY"  # vLLM typically requires a non-empty key
+        _vllm_client = OpenAI(api_key=key, base_url=base)
+    return _vllm_client
+
+
 def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_key: Optional[str] = None) -> Optional[str]:
     """
-    Call the local OpenAI-compatible vLLM using the openai Python library.
+    Call the local OpenAI-compatible vLLM using the openai Python library v1.0+.
 
-    This sets openai.api_base to the local server (e.g. http://127.0.0.1:8000/v1)
-    and openai.api_key to the provided api_key (or empty string for anonymous).
+    Uses attribute access (not dict-like .get()) for the response object.
     """
-    base = f"http://127.0.0.1:{port}/v1"
-    key = api_key or ""
-    client = OpenAI(api_key=key, base_url=base)
+    client = get_vllm_client(port=port, api_key=api_key)
 
     try:
-        # Use the new client.chat.completions.create interface
+        # Use the chat.completions.create interface (OpenAI v1.0+)
         resp = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=512,
             temperature=0.0,
+            timeout=timeout,
         )
-        # Extract content safely
-        if resp and hasattr(resp, "get") and resp.get("choices"):
-            ch = resp.get("choices")[0]
-            # choice may be a mapping-like object
-            if isinstance(ch, dict):
-                msg = ch.get("message") or {}
-                if isinstance(msg, dict) and "content" in msg:
-                    return msg.get("content")
-                if "text" in ch:
-                    return ch.get("text")
-            else:
-                # try attribute access
-                try:
-                    return ch.message.content
-                except Exception:
-                    pass
-        # fallback
-        try:
-            return resp.output
-        except Exception:
-            return None
+        
+        # OpenAI v1.0+ uses attribute access, not dict-like access
+        if resp and resp.choices:
+            choice = resp.choices[0]
+            if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                return choice.message.content
+            # Fallback for completion endpoint (if used)
+            if hasattr(choice, 'text'):
+                return choice.text
+        
+        return None
     except Exception as e:
         print(f"Error calling vLLM (openai client): {e}", file=sys.stderr)
         return None
