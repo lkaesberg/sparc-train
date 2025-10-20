@@ -160,6 +160,7 @@ def get_vllm_client(port: int = 8000, api_key: Optional[str] = None) -> OpenAI:
     if _vllm_client is None:
         base = f"http://127.0.0.1:{port}/v1"
         key = api_key or "EMPTY"  # vLLM typically requires a non-empty key
+        print(f"[INFO] Initializing vLLM client at {base}", file=sys.stderr)
         _vllm_client = OpenAI(api_key=key, base_url=base)
     return _vllm_client
 
@@ -173,6 +174,7 @@ def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_
     client = get_vllm_client(port=port, api_key=api_key)
 
     try:
+        print(f"[INFO] Calling vLLM with model '{model}' (prompt length: {len(prompt)} chars)", file=sys.stderr)
         # Use the chat.completions.create interface (OpenAI v1.0+)
         resp = client.chat.completions.create(
             model=model,
@@ -186,14 +188,19 @@ def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_
         if resp and resp.choices:
             choice = resp.choices[0]
             if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                return choice.message.content
+                content = choice.message.content
+                print(f"[INFO] Received response ({len(content)} chars)", file=sys.stderr)
+                return content
             # Fallback for completion endpoint (if used)
             if hasattr(choice, 'text'):
-                return choice.text
+                text = choice.text
+                print(f"[INFO] Received text response ({len(text)} chars)", file=sys.stderr)
+                return text
         
+        print(f"[WARN] No content in response", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"Error calling vLLM (openai client): {e}", file=sys.stderr)
+        print(f"[ERROR] Error calling vLLM: {e}", file=sys.stderr)
         return None
 
 
@@ -204,10 +211,12 @@ def parse_llm_response(text: str, num_categories: int) -> dict:
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end < start:
+        print(f"[WARN] Failed to find JSON object in response: {text[:100]}...", file=sys.stderr)
         return {"categories": [-2], "explanation": f"failed_to_parse_raw_response: {text}"}
     try:
         obj = json.loads(text[start:end+1])
-    except Exception:
+    except Exception as e:
+        print(f"[WARN] Failed to parse JSON: {e}", file=sys.stderr)
         return {"categories": [-3], "explanation": f"failed_to_json_parse: {text}"}
 
     # If the model provided a 'categories' array, validate and return it (allow empty)
@@ -224,15 +233,26 @@ def parse_llm_response(text: str, num_categories: int) -> dict:
         except Exception:
             # ignore malformed entries
             pass
+        print(f"[INFO] Parsed categories: {valid}", file=sys.stderr)
         return {"categories": valid, "explanation": obj.get("explanation", "")}
 
     # Fallback: return empty categories with raw explanation
+    print(f"[WARN] No 'categories' key found in response", file=sys.stderr)
     return {"categories": [], "explanation": f"failed_to_parse_expected_keys: {json.dumps(obj)[:200]}"}
 
 
 def annotate_file(input_path: str, output_path: str, categories: List[str], model: str, port: int, api_key: Optional[str], last_n: int):
+    print(f"[INFO] Starting annotation process", file=sys.stderr)
+    print(f"[INFO] Input file: {input_path}", file=sys.stderr)
+    print(f"[INFO] Output file: {output_path}", file=sys.stderr)
+    print(f"[INFO] Model: {model}", file=sys.stderr)
+    print(f"[INFO] Port: {port}", file=sys.stderr)
+    print(f"[INFO] Categories: {len(categories)} categories defined", file=sys.stderr)
+    print(f"[INFO] Using last {last_n} sentences from trace", file=sys.stderr)
+    
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     n = 0
+    errors = 0
     with open(input_path, "r", encoding="utf-8") as inf, open(output_path, "w", encoding="utf-8") as outf:
         for line in inf:
             line = line.strip()
@@ -241,13 +261,18 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
             try:
                 sample = json.loads(line)
             except Exception as e:
-                print(f"Skipping invalid JSON line: {e}", file=sys.stderr)
+                print(f"[ERROR] Skipping invalid JSON line: {e}", file=sys.stderr)
                 continue
             n += 1
+            sample_id = sample.get("id", f"sample_{n}")
+            print(f"\n[INFO] Processing sample {n} (id: {sample_id})", file=sys.stderr)
+            
             prompt = build_prompt(sample, categories, last_n)
-            raw = call_vllm(prompt, model=model, port=port)
+            raw = call_vllm(prompt, model=model, port=port, api_key=api_key)
             if raw is None:
+                print(f"[WARN] No response from vLLM for sample {n}", file=sys.stderr)
                 ann = {"categories": [-1], "explanation": "vllm_error_forced_choice"}
+                errors += 1
             else:
                 parsed = parse_llm_response(raw, num_categories=len(categories))
                 ann = parsed
@@ -255,8 +280,10 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
             sample["llm_annotation"] = {"categories": ann.get("categories", []), "explanation": ann.get("explanation", ""), "llm_raw": raw}
             outf.write(json.dumps(sample, ensure_ascii=False) + "\n")
             if n % 10 == 0:
-                print(f"Annotated {n} samples...")
-    print(f"Done — annotated {n} samples -> {output_path}")
+                print(f"[PROGRESS] Annotated {n} samples ({errors} errors so far)...", file=sys.stderr)
+    
+    print(f"\n[SUCCESS] Done — annotated {n} samples -> {output_path}", file=sys.stderr)
+    print(f"[STATS] Total errors: {errors}/{n} ({100*errors/n:.1f}%)" if n > 0 else "[STATS] No samples processed", file=sys.stderr)
 
 
 def main():
@@ -269,8 +296,16 @@ def main():
     parser.add_argument("--last-n-sentences", type=int, default=100, help="How many of the solver's last sentences to include in the judge prompt")
     args = parser.parse_args()
 
+    print(f"\n{'='*60}", file=sys.stderr)
+    print(f"SPaRC Annotation Script", file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr)
+
     cats = DEFAULT_CATEGORIES
     annotate_file(args.input, args.output, cats, args.model, args.port, args.api_key, args.last_n_sentences)
+    
+    print(f"\n{'='*60}", file=sys.stderr)
+    print(f"Annotation complete!", file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr)
 
 
 if __name__ == "__main__":
