@@ -158,7 +158,8 @@ def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_
     and openai.api_key to the provided api_key (or empty string for anonymous).
     """
     base = f"http://127.0.0.1:{port}/v1"
-    client = OpenAI(api_key=(api_key or ""), api_base=base)
+    key = api_key or ""
+    client = OpenAI(api_key=key, base_url=base)
 
     try:
         # Use the new client.chat.completions.create interface
