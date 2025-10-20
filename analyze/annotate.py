@@ -179,7 +179,7 @@ def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_
         resp = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=512,
+            max_tokens=10000,
             temperature=0.0,
             timeout=timeout,
         )
@@ -208,6 +208,7 @@ def parse_llm_response(text: str, num_categories: int) -> dict:
     # The prompt requests a JSON object with either 'category' (int) or
     # 'categories' (list) but we enforce exactly one selected category.
     text = (text or "").strip()
+    text = text.split("</think>")[-1]
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end < start:
