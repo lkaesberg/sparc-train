@@ -145,6 +145,8 @@ def build_prompt(sample: dict, categories: List[str], last_n: int) -> str:
         f"{cat_lines}\n\n"
         "Answer as valid JSON ONLY, e.g. {\"categories\": [1,3], \"explanation\": \"...\"}."
     )
+    print("=== Prompt ===")
+    print(prompt)
     return prompt
 
 
@@ -239,7 +241,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Input JSONL file (single file)")
     parser.add_argument("--output", required=True, help="Output JSONL file")
-    # no --categories argument: we use the embedded DEFAULT_CATEGORIES
     parser.add_argument("--model", default="lkaesberg/Qwen3-14B-SPaRC-GRPO-8E")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--api-key", default=None, help="OPENAI_API_KEY if needed; default none (localhost)")

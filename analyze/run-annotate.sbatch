@@ -52,20 +52,19 @@ fi
 #SBATCH --partition=scc-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:A100:1
+#SBATCH --gres=gpu:A100:4
 #SBATCH --time=04:00:00
 #SBATCH --mem=32G
 #SBATCH -c 4
-#SBATCH --output=analyze/results/annotate/%x-%j.out
-#SBATCH --error=analyze/results/annotate/%x-%j.err
+#SBATCH --output=analyze/results/annotate/logs/%x-%j.out
+#SBATCH --error=analyze/results/annotate/logs/%x-%j.out
 
 set -euo pipefail
 
 # defaults (can be overridden via env or sbatch --export)
 INPUT="${INPUT:-}"
 OUTPUT="${OUTPUT:-}"
-# categories file is no longer required; annotator uses embedded categories.
-MODEL="${MODEL:-lkaesberg/Qwen3-14B-SPaRC-GRPO-8E}"
+MODEL="${MODEL:-meta-llama/Llama-3.3-70B-Instruct}"
 PORT="${LLM_PORT:-8000}"
 # how many final sentences from the solver trace to include in the prompt
 LAST_N_SENTENCES="${LAST_N_SENTENCES:-100}"
