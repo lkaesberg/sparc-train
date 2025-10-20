@@ -22,6 +22,9 @@ PORT="${LLM_PORT:-8000}"
 # how many final sentences from the solver trace to include in the prompt
 LAST_N_SENTENCES="${LAST_N_SENTENCES:-100}"
 
+TP_SIZE="${SLURM_GPUS_ON_NODE:-4}"            # tensor-parallel size (GPUs on node)
+GPU_UTIL="${LLM_GPU_UTIL:-0.90}"
+
 if [[ -z "$INPUT" ]]; then
   echo "ERROR: INPUT not set. Provide --input <file.jsonl> or set INPUT env var." >&2
   exit 1
@@ -45,6 +48,8 @@ echo "Starting vLLM server (model=$MODEL) -> $LOG_FILE"
 python -u -m vllm.entrypoints.openai.api_server \
   --model "$MODEL" \
   --port "$PORT" \
+  --tensor-parallel-size "$TP_SIZE" \
+  --gpu-memory-utilization "$GPU_UTIL" \
   --trust-remote-code \
   >"$LOG_FILE" 2>&1 &
 SERVER_PID=$!

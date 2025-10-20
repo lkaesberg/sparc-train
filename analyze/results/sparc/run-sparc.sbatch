@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 ###############################################################################
 # Lightweight SLURM helper to start a local vLLM server and run `sparc` client
 # This variant assumes you use the shared `vllm` environment (conda/virtualenv)
