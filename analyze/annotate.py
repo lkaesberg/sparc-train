@@ -45,16 +45,14 @@ def load_categories(path: str) -> List[str]:
 
 
 # Default categories: if the user does not pass a --categories file, these
-# will be used. Customize to match your desired 8 categories.
+# will be used. These represent common failure modes in pathfinding reasoning.
 DEFAULT_CATEGORIES = [
-    "Solved correctly (exact match)",
-    "Solved but minor path deviation",
-    "Incorrect path (valid shape but wrong exit)",
-    "Crossing or rule violation",
-    "Partial solution (incomplete)",
-    "No attempt / empty reasoning",
-    "Nonsensical / hallucinated path",
-    "Other / ambiguous"
+    "A — Planning / Logical Reasoning Flaw: Focuses on local moves or inconsistent logic. Often builds a path that works step-by-step but cannot satisfy all constraints in the end.",
+    "B — Misunderstood or Invented Rule: Misinterprets what a rule means, ignores it, or invents new constraints not part of the puzzle (e.g., assumes illegal symmetry or shape rules).",
+    "C — Spatial / Geometric Misjudgment: Makes geometric mistakes such as wrong shape size, rotation, or region estimation. Often traps itself in areas too small for the required pattern.",
+    "D — Premature Verification / Overconfidence: Claims the solution is correct or fully verified without checking key rules. Typical statements include 'this should work' while violations remain.",
+    "E — No Correction Despite Noticing Issue: Recognizes a contradiction or error in reasoning but never adjusts the plan or recomputes the path.",
+    "F — Vague or Missing Reasoning: Provides almost no usable reasoning — just vague statements or generic path descriptions without real justification."
 ]
 
 
@@ -133,20 +131,23 @@ def build_prompt(sample: dict, categories: List[str], last_n: int) -> str:
     analysis_text = json.dumps(analysis, ensure_ascii=False)
 
     prompt = (
-        "You are tasked to annotate the failure reason for a 2D pathfinding task.\n\n"
-        "The original task looked like this:\n\n"
+        "You are an expert at analyzing reasoning failures in pathfinding tasks.\n\n"
+        "The original task was:\n\n"
         f"{orig_prompt_block}\n"
-        "The final summary and decision is this:\n\n"
+        "The model's final reasoning and decision:\n\n"
         f"{trace_excerpt}\n\n"
-        "The path has these problems:\n\n"
-        f"PATH ANALYSIS\n{analysis_text}\n\n"
-        "Categorize the failure reason. Provide as a valid JSON object with two keys:\n"
-        "  - 'categories' (an array of integer indices starting at 1, you may return an empty array if none apply)\n"
-        "  - 'explanation' (short justification).\n\n"
-        "You can select no reason if nothing is fitting, or up to all reasons.\n\n"
-        "Categories:\n"
+        "Path analysis (detected issues):\n\n"
+        f"{analysis_text}\n\n"
+        "Your task: Identify which failure mode(s) best explain why the solution failed.\n\n"
+        "Failure Categories:\n"
         f"{cat_lines}\n\n"
-        "Answer as valid JSON ONLY, e.g. {\"categories\": [1,3], \"explanation\": \"...\"}."
+        "Instructions:\n"
+        "- Select one or more categories (A-F) that apply, or return empty array [] if none fit\n"
+        "- Provide a brief explanation citing specific evidence from the reasoning\n"
+        "- Be precise: distinguish between misunderstanding rules (B) vs poor planning (A) vs geometric errors (C)\n\n"
+        "Return ONLY a valid JSON object with this exact format:\n"
+        '{{"categories": ["A", "C"], "explanation": "The model exhibits... because..."}}\n\n'
+        "Your response (JSON only):"
     )
     return prompt
 
@@ -165,72 +166,90 @@ def get_vllm_client(port: int = 8000, api_key: Optional[str] = None) -> OpenAI:
     return _vllm_client
 
 
-def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_key: Optional[str] = None) -> Optional[str]:
+def call_vllm(prompt: str, model: str, port: int = 8000, timeout: int = 60, api_key: Optional[str] = None, max_retries: int = 5) -> Optional[str]:
     """
     Call the local OpenAI-compatible vLLM using the openai Python library v1.0+.
 
     Uses attribute access (not dict-like .get()) for the response object.
+    Retries up to max_retries times on failure.
     """
     client = get_vllm_client(port=port, api_key=api_key)
 
-    try:
-        print(f"[INFO] Calling vLLM with model '{model}' (prompt length: {len(prompt)} chars)", file=sys.stderr)
-        # Use the chat.completions.create interface (OpenAI v1.0+)
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=10000,
-            temperature=0.0,
-            timeout=timeout,
-        )
-        
-        # OpenAI v1.0+ uses attribute access, not dict-like access
-        if resp and resp.choices:
-            choice = resp.choices[0]
-            if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                content = choice.message.content
-                print(f"[INFO] Received response ({len(content)} chars)", file=sys.stderr)
-                return content
-            # Fallback for completion endpoint (if used)
-            if hasattr(choice, 'text'):
-                text = choice.text
-                print(f"[INFO] Received text response ({len(text)} chars)", file=sys.stderr)
-                return text
-        
-        print(f"[WARN] No content in response", file=sys.stderr)
-        return None
-    except Exception as e:
-        print(f"[ERROR] Error calling vLLM: {e}", file=sys.stderr)
-        return None
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                print(f"[INFO] Retry attempt {attempt}/{max_retries-1}", file=sys.stderr)
+            print(f"[INFO] Calling vLLM with model '{model}' (prompt length: {len(prompt)} chars)", file=sys.stderr)
+            
+            # Use the chat.completions.create interface (OpenAI v1.0+)
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=10000,
+                temperature=0.0,
+                timeout=timeout,
+            )
+            
+            # OpenAI v1.0+ uses attribute access, not dict-like access
+            if resp and resp.choices:
+                choice = resp.choices[0]
+                if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                    content = choice.message.content
+                    print(f"[INFO] Received response ({len(content)} chars)", file=sys.stderr)
+                    return content
+                # Fallback for completion endpoint (if used)
+                if hasattr(choice, 'text'):
+                    text = choice.text
+                    print(f"[INFO] Received text response ({len(text)} chars)", file=sys.stderr)
+                    return text
+            
+            print(f"[WARN] No content in response (attempt {attempt+1}/{max_retries})", file=sys.stderr)
+            if attempt < max_retries - 1:
+                continue  # Try again
+            return None
+            
+        except Exception as e:
+            print(f"[ERROR] Error calling vLLM (attempt {attempt+1}/{max_retries}): {e}", file=sys.stderr)
+            if attempt < max_retries - 1:
+                import time
+                wait_time = 2 ** attempt  # Exponential backoff: 1, 2, 4, 8 seconds
+                print(f"[INFO] Waiting {wait_time}s before retry...", file=sys.stderr)
+                time.sleep(wait_time)
+            else:
+                print(f"[ERROR] All {max_retries} attempts failed", file=sys.stderr)
+                return None
+    
+    return None
 
 
 def parse_llm_response(text: str, num_categories: int) -> dict:
-    # The prompt requests a JSON object with either 'category' (int) or
-    # 'categories' (list) but we enforce exactly one selected category.
+    # The prompt requests a JSON object with 'categories' (array of letters A-F)
+    # and 'explanation' (string).
     text = (text or "").strip()
     text = text.split("</think>")[-1]
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end < start:
         print(f"[WARN] Failed to find JSON object in response: {text[:100]}...", file=sys.stderr)
-        return {"categories": [-2], "explanation": f"failed_to_parse_raw_response: {text}"}
+        return {"categories": ["ERROR_PARSE"], "explanation": f"failed_to_parse_raw_response: {text}"}
     try:
         obj = json.loads(text[start:end+1])
     except Exception as e:
         print(f"[WARN] Failed to parse JSON: {e}", file=sys.stderr)
-        return {"categories": [-3], "explanation": f"failed_to_json_parse: {text}"}
+        return {"categories": ["ERROR_JSON"], "explanation": f"failed_to_json_parse: {text}"}
 
     # If the model provided a 'categories' array, validate and return it (allow empty)
     if "categories" in obj:
         cats = obj.get("categories") or []
-        if isinstance(cats, int):
+        if isinstance(cats, str):
             cats = [cats]
         valid = []
+        allowed_letters = [chr(65 + i) for i in range(num_categories)]  # A, B, C, D, E, F
         try:
             for x in cats:
-                xi = int(x)
-                if 1 <= xi <= num_categories:
-                    valid.append(xi)
+                x_upper = str(x).upper().strip()
+                if x_upper in allowed_letters:
+                    valid.append(x_upper)
         except Exception:
             # ignore malformed entries
             pass
@@ -272,7 +291,7 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
             raw = call_vllm(prompt, model=model, port=port, api_key=api_key)
             if raw is None:
                 print(f"[WARN] No response from vLLM for sample {n}", file=sys.stderr)
-                ann = {"categories": [-1], "explanation": "vllm_error_forced_choice"}
+                ann = {"categories": ["ERROR_VLLM"], "explanation": "vllm_error_no_response"}
                 errors += 1
             else:
                 parsed = parse_llm_response(raw, num_categories=len(categories))
