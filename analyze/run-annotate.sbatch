@@ -15,9 +15,9 @@
 set -euo pipefail
 
 # defaults (can be overridden via env or sbatch --export)
-INPUT="${INPUT:-}"
+INPUT="${INPUT:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/sparc/lkaesberg_Qwen3-32B-SPaRC-GRPO-L.jsonl}"
 OUTPUT="${OUTPUT:-}"
-MODEL="${MODEL:-meta-llama/Llama-3.3-70B-Instruct}"
+MODEL="${MODEL:-Qwen/Qwen3-32B}"
 PORT="${LLM_PORT:-8000}"
 # how many final sentences from the solver trace to include in the prompt
 LAST_N_SENTENCES="${LAST_N_SENTENCES:-100}"
