@@ -52,7 +52,7 @@ DEFAULT_CATEGORIES = [
     "C — Spatial / Geometric Misjudgment: Makes geometric mistakes such as wrong shape size, rotation, or region estimation. Often traps itself in areas too small for the required pattern.",
     "D — Premature Verification / Overconfidence: Claims the solution is correct or fully verified without checking key rules. Typical statements include 'this should work' while violations remain.",
     "E — No Correction Despite Noticing Issue: Recognizes a contradiction or error in reasoning but never adjusts the plan or recomputes the path.",
-    "F — Vague or Missing Reasoning: Provides almost no usable reasoning — just vague statements or generic path descriptions without real justification."
+    "F — Grid / Coordinate Error: Uses incorrect coordinates or indexing (off-by-one, swapped x/y, or path steps outside the defined board) due to coordinate confusion."
 ]
 
 
