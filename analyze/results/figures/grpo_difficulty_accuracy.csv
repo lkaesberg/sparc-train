@@ -39,6 +39,11 @@ Qwen3-0.6B,SFT,2,3.4
 Qwen3-0.6B,SFT,3,0.8
 Qwen3-0.6B,SFT,4,1.2
 Qwen3-0.6B,SFT,5,0.0
+Qwen3-14B,8E,1,17.4
+Qwen3-14B,8E,2,9.3
+Qwen3-14B,8E,3,3.3
+Qwen3-14B,8E,4,2.3
+Qwen3-14B,8E,5,0.0
 Qwen3-14B,L,1,44.2
 Qwen3-14B,L,2,20.3
 Qwen3-14B,L,3,5.0
@@ -54,6 +59,11 @@ Qwen3-14B,SFT,2,5.1
 Qwen3-14B,SFT,3,1.7
 Qwen3-14B,SFT,4,3.5
 Qwen3-14B,SFT,5,1.1
+Qwen3-32B,8E,1,19.8
+Qwen3-32B,8E,2,8.5
+Qwen3-32B,8E,3,5.8
+Qwen3-32B,8E,4,2.3
+Qwen3-32B,8E,5,0.0
 Qwen3-32B,L,1,51.2
 Qwen3-32B,L,2,21.2
 Qwen3-32B,L,3,7.4

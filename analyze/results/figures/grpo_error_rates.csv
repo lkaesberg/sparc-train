@@ -39,6 +39,11 @@ Qwen3-0.6B,SFT,Disconnected Paths,3.5999999999999943
 Qwen3-0.6B,SFT,Wrong Start/End,7.200000000000003
 Qwen3-0.6B,SFT,Intersecting Paths,41.8
 Qwen3-0.6B,SFT,Rule Violations,6.400000000000006
+Qwen3-14B,8E,Invalid Paths,0.4000000000000057
+Qwen3-14B,8E,Disconnected Paths,0.20000000000000284
+Qwen3-14B,8E,Wrong Start/End,0.0
+Qwen3-14B,8E,Intersecting Paths,0.20000000000000284
+Qwen3-14B,8E,Rule Violations,0.0
 Qwen3-14B,L,Invalid Paths,18.0
 Qwen3-14B,L,Disconnected Paths,9.599999999999994
 Qwen3-14B,L,Wrong Start/End,1.2000000000000028
@@ -54,6 +59,11 @@ Qwen3-14B,SFT,Disconnected Paths,0.4000000000000057
 Qwen3-14B,SFT,Wrong Start/End,3.799999999999997
 Qwen3-14B,SFT,Intersecting Paths,34.2
 Qwen3-14B,SFT,Rule Violations,1.2000000000000028
+Qwen3-32B,8E,Invalid Paths,13.599999999999994
+Qwen3-32B,8E,Disconnected Paths,0.7999999999999972
+Qwen3-32B,8E,Wrong Start/End,0.4000000000000057
+Qwen3-32B,8E,Intersecting Paths,1.4000000000000057
+Qwen3-32B,8E,Rule Violations,11.599999999999994
 Qwen3-32B,L,Invalid Paths,32.599999999999994
 Qwen3-32B,L,Disconnected Paths,16.400000000000006
 Qwen3-32B,L,Wrong Start/End,1.0
