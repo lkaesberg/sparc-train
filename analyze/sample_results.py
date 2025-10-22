@@ -54,6 +54,33 @@ def load_jsonl_files(results_dir):
     return all_entries
 
 
+def filter_by_solved_status(entries, solved_filter):
+    """
+    Filter entries by solved status.
+    
+    Args:
+        entries: List of entries
+        solved_filter: 'solved', 'unsolved', or None (no filtering)
+    
+    Returns:
+        Filtered list of entries
+    """
+    if solved_filter is None:
+        return entries
+    
+    filtered = []
+    for entry in entries:
+        result = entry.get('result', {})
+        is_solved = result.get('solved', False)
+        
+        if solved_filter == 'solved' and is_solved:
+            filtered.append(entry)
+        elif solved_filter == 'unsolved' and not is_solved:
+            filtered.append(entry)
+    
+    return filtered
+
+
 def group_by_difficulty(entries):
     """Group entries by difficulty level."""
     difficulty_groups = defaultdict(list)
@@ -167,6 +194,13 @@ def main():
         default=None,
         help='Random seed for reproducibility (optional)'
     )
+    parser.add_argument(
+        '-f', '--filter',
+        type=str,
+        choices=['solved', 'unsolved'],
+        default=None,
+        help='Filter samples by solved status: "solved" or "unsolved" (optional)'
+    )
     
     args = parser.parse_args()
     
@@ -181,6 +215,13 @@ def main():
     
     print(f"\nNote: Same puzzle ID can appear multiple times across different files")
     
+    # Filter by solved status if requested
+    if args.filter:
+        print(f"\nFiltering for {args.filter} samples...")
+        filtered_entries = filter_by_solved_status(all_entries, args.filter)
+        print(f"After filtering: {len(filtered_entries)} {args.filter} entries (from {len(all_entries)} total)")
+        all_entries = filtered_entries
+    
     # Group by difficulty
     difficulty_groups = group_by_difficulty(all_entries)
     
@@ -193,13 +234,23 @@ def main():
     # Print final statistics
     print(f"\nFinal sample statistics:")
     final_difficulty_counts = defaultdict(int)
+    solved_count = 0
+    unsolved_count = 0
+    
     for entry in samples:
         difficulty = entry.get('difficulty_level')
         if difficulty is not None:
             final_difficulty_counts[difficulty] += 1
+        
+        result = entry.get('result', {})
+        if result.get('solved', False):
+            solved_count += 1
+        else:
+            unsolved_count += 1
     
     for level in sorted(final_difficulty_counts.keys()):
         print(f"  Level {level}: {final_difficulty_counts[level]} samples")
+    print(f"  Solved: {solved_count}, Unsolved: {unsolved_count}")
 
 
 if __name__ == '__main__':
