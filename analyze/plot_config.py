@@ -25,7 +25,7 @@ def setup_plot_style(use_latex=True):
 
     # Font configuration - Latin Modern Roman with LaTeX support
     plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = ["Latin Modern Roman"]
+    plt.rcParams["font.serif"] = ["Times"]
     plt.rcParams["text.usetex"] = use_latex
     plt.rcParams["mathtext.fontset"] = "cm"  # Computer Modern for math
 
