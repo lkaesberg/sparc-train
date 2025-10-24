@@ -272,7 +272,15 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
     
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     n = 0
+    skipped = 0
     errors = 0
+    
+    # Statistics tracking
+    from collections import Counter
+    category_counts = Counter()
+    samples_by_category_count = Counter()  # Track how many categories per sample
+    category_co_occurrence = Counter()  # Track which categories appear together
+    
     with open(input_path, "r", encoding="utf-8") as inf, open(output_path, "w", encoding="utf-8") as outf:
         for line in inf:
             line = line.strip()
@@ -283,6 +291,17 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
             except Exception as e:
                 print(f"[ERROR] Skipping invalid JSON line: {e}", file=sys.stderr)
                 continue
+            
+            # Skip correctly solved samples
+            is_solved = sample.get("result", {}).get("solved", False)
+            if is_solved:
+                skipped += 1
+                sample_id = sample.get("id", f"sample_{n+skipped}")
+                print(f"[INFO] Skipping sample (id: {sample_id}) - already correctly solved", file=sys.stderr)
+                # Write the sample to output without annotation
+                outf.write(json.dumps(sample, ensure_ascii=False) + "\n")
+                continue
+            
             n += 1
             sample_id = sample.get("id", f"sample_{n}")
             print(f"\n[INFO] Processing sample {n} (id: {sample_id})", file=sys.stderr)
@@ -296,20 +315,92 @@ def annotate_file(input_path: str, output_path: str, categories: List[str], mode
             else:
                 parsed = parse_llm_response(raw, num_categories=len(categories))
                 ann = parsed
+            
+            # Track statistics
+            assigned_cats = ann.get("categories", [])
+            # Filter out error categories for statistics
+            valid_cats = [c for c in assigned_cats if not c.startswith("ERROR_")]
+            
+            for cat in valid_cats:
+                category_counts[cat] += 1
+            
+            samples_by_category_count[len(valid_cats)] += 1
+            
+            # Track co-occurrence (pairs of categories that appear together)
+            if len(valid_cats) > 1:
+                for i, cat1 in enumerate(valid_cats):
+                    for cat2 in valid_cats[i+1:]:
+                        pair = tuple(sorted([cat1, cat2]))
+                        category_co_occurrence[pair] += 1
+            
             # Keep 1-based indices in output (single choice enforced)
             sample["llm_annotation"] = {"categories": ann.get("categories", []), "explanation": ann.get("explanation", ""), "llm_raw": raw}
             outf.write(json.dumps(sample, ensure_ascii=False) + "\n")
             if n % 10 == 0:
                 print(f"[PROGRESS] Annotated {n} samples ({errors} errors so far)...", file=sys.stderr)
     
-    print(f"\n[SUCCESS] Done — annotated {n} samples -> {output_path}", file=sys.stderr)
-    print(f"[STATS] Total errors: {errors}/{n} ({100*errors/n:.1f}%)" if n > 0 else "[STATS] No samples processed", file=sys.stderr)
+    # Print comprehensive statistics
+    print(f"\n{'='*60}", file=sys.stderr)
+    print(f"ANNOTATION STATISTICS", file=sys.stderr)
+    print(f"{'='*60}\n", file=sys.stderr)
+    
+    total_samples = n + skipped
+    print(f"[SUMMARY]", file=sys.stderr)
+    print(f"  Total samples processed:     {total_samples}", file=sys.stderr)
+    print(f"  Correctly solved (skipped):  {skipped} ({100*skipped/total_samples:.1f}%)" if total_samples > 0 else "", file=sys.stderr)
+    print(f"  Failed samples (annotated):  {n} ({100*n/total_samples:.1f}%)" if total_samples > 0 else "", file=sys.stderr)
+    print(f"  Annotation errors:           {errors} ({100*errors/n:.1f}%)" if n > 0 else "", file=sys.stderr)
+    print(f"", file=sys.stderr)
+    
+    if n > 0:
+        print(f"[FAILURE CATEGORY DISTRIBUTION]", file=sys.stderr)
+        # Get category labels
+        cat_labels = {
+            "A": "Planning/Logical Flaw",
+            "B": "Misunderstood/Invented Rule",
+            "C": "Spatial/Geometric Error",
+            "D": "Premature Verification",
+            "E": "No Correction Despite Noticing",
+            "F": "Grid/Coordinate Error"
+        }
+        
+        total_annotations = sum(category_counts.values())
+        for cat in sorted(category_counts.keys()):
+            count = category_counts[cat]
+            pct = 100 * count / n
+            label = cat_labels.get(cat, "Unknown")
+            print(f"  {cat} — {label:30s}: {count:4d} ({pct:5.1f}%)", file=sys.stderr)
+        
+        print(f"\n[CATEGORIES PER SAMPLE]", file=sys.stderr)
+        for num_cats in sorted(samples_by_category_count.keys()):
+            count = samples_by_category_count[num_cats]
+            pct = 100 * count / n
+            if num_cats == 0:
+                label = "No categories assigned"
+            elif num_cats == 1:
+                label = "Single category"
+            else:
+                label = f"{num_cats} categories"
+            print(f"  {label:25s}: {count:4d} ({pct:5.1f}%)", file=sys.stderr)
+        
+        if category_co_occurrence:
+            print(f"\n[TOP CATEGORY CO-OCCURRENCES]", file=sys.stderr)
+            top_pairs = category_co_occurrence.most_common(10)
+            for (cat1, cat2), count in top_pairs:
+                pct = 100 * count / n
+                label1 = cat_labels.get(cat1, cat1)
+                label2 = cat_labels.get(cat2, cat2)
+                print(f"  {cat1}+{cat2} ({label1[:15]:15s} + {label2[:15]:15s}): {count:4d} ({pct:5.1f}%)", file=sys.stderr)
+    
+    print(f"\n[OUTPUT]", file=sys.stderr)
+    print(f"  File: {output_path}", file=sys.stderr)
+    print(f"\n{'='*60}\n", file=sys.stderr)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Input JSONL file (single file)")
-    parser.add_argument("--output", required=True, help="Output JSONL file")
+    parser.add_argument("--output", required=False, help="Output JSONL file (if not specified, will be auto-generated with model name)")
     parser.add_argument("--model", default="lkaesberg/Qwen3-14B-SPaRC-GRPO-8E")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--api-key", default=None, help="OPENAI_API_KEY if needed; default none (localhost)")
@@ -320,8 +411,22 @@ def main():
     print(f"SPaRC Annotation Script", file=sys.stderr)
     print(f"{'='*60}\n", file=sys.stderr)
 
+    # Auto-generate output filename if not provided
+    output_path = args.output
+    if output_path is None:
+        # Extract model name from model path (e.g., "lkaesberg/Qwen3-14B-SPaRC-GRPO-8E" -> "Qwen3-14B-SPaRC-GRPO-8E")
+        model_name = args.model.replace("/", "_")
+        
+        # Get input filename without extension
+        input_basename = os.path.splitext(os.path.basename(args.input))[0]
+        
+        # Create output filename with model name
+        output_filename = f"{input_basename}.annotated_by_{model_name}.jsonl"
+        output_path = os.path.join("analyze/results/annotate", output_filename)
+        print(f"[INFO] Auto-generated output path: {output_path}", file=sys.stderr)
+
     cats = DEFAULT_CATEGORIES
-    annotate_file(args.input, args.output, cats, args.model, args.port, args.api_key, args.last_n_sentences)
+    annotate_file(args.input, output_path, cats, args.model, args.port, args.api_key, args.last_n_sentences)
     
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"Annotation complete!", file=sys.stderr)
