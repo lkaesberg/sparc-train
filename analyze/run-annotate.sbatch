@@ -32,7 +32,8 @@ fi
 
 if [[ -z "$OUTPUT" ]]; then
   BASENAME=$(basename "$INPUT" .jsonl)
-  OUTPUT="results/annotate/${BASENAME}.annotated.jsonl"
+  MODEL_SAFE=$(echo "$MODEL" | tr '/:' '__')
+  OUTPUT="results/annotate/${BASENAME}.annotated_by_${MODEL_SAFE}.jsonl"
 fi
 
 mkdir -p results/annotate
