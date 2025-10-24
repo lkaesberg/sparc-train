@@ -1,0 +1,60 @@
+Difficulty 1
+  total puzzles:        86
+  wins:       1.16% (1)
+  fails:     98.84% (85)
+  terminated runs:     23.26% (20)
+  truncated runs:      23.26% (20)
+  invalid model output: 53.49% (46)
+  average_completion_tokens_per_puzzle: avg=611.28, med=325.00, min=0, max=7384
+
+  steps_per_puzzle: avg=32.07, med=12.00, min=1, max=100
+
+  total_completion_tokens_per_puzzle: avg=11869.81, med=7825.00, min=0, max=43522
+Difficulty 2
+  total puzzles:        118
+  wins:       1.69% (2)
+  fails:     98.31% (116)
+  terminated runs:     19.49% (23)
+  truncated runs:      27.12% (32)
+  invalid model output: 53.39% (63)
+  average_completion_tokens_per_puzzle: avg=463.08, med=276.50, min=0, max=8724
+
+  steps_per_puzzle: avg=32.94, med=11.00, min=1, max=100
+
+  total_completion_tokens_per_puzzle: avg=10436.67, med=6251.50, min=0, max=47156
+Difficulty 3
+  total puzzles:        121
+  wins:       1.65% (2)
+  fails:     98.35% (119)
+  terminated runs:     19.01% (23)
+  truncated runs:      22.31% (27)
+  invalid model output: 58.68% (71)
+  average_completion_tokens_per_puzzle: avg=552.58, med=301.00, min=0, max=11734
+
+  steps_per_puzzle: avg=32.46, med=12.00, min=1, max=100
+
+  total_completion_tokens_per_puzzle: avg=9479.35, med=5541.00, min=0, max=30170
+Difficulty 4
+  total puzzles:        86
+  wins:       0.00% (0)
+  fails:     100.00% (86)
+  terminated runs:     17.44% (15)
+  truncated runs:      19.77% (17)
+  invalid model output: 62.79% (54)
+  average_completion_tokens_per_puzzle: avg=445.92, med=264.00, min=0, max=5412
+
+  steps_per_puzzle: avg=30.91, med=13.50, min=1, max=100
+
+  total_completion_tokens_per_puzzle: avg=9319.53, med=5215.50, min=0, max=35731
+Difficulty 5
+  total puzzles:        89
+  wins:       0.00% (0)
+  fails:     100.00% (89)
+  terminated runs:     20.22% (18)
+  truncated runs:      23.60% (21)
+  invalid model output: 56.18% (50)
+  average_completion_tokens_per_puzzle: avg=406.48, med=278.00, min=0, max=5820
+
+  steps_per_puzzle: avg=35.48, med=17.00, min=1, max=100
+
+  total_completion_tokens_per_puzzle: avg=9794.33, med=7078.00, min=0, max=30850

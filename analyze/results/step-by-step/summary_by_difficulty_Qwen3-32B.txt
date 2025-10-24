@@ -1,0 +1,55 @@
+Difficulty 1
+  total puzzles:        86
+  wins:       34.88% (30)
+  fails:     65.12% (56)
+  terminated runs:     66.28% (57)
+  truncated runs:      33.72% (29)
+  average_completion_tokens_per_puzzle: avg=1818.70, med=839.25, min=107, max=12266
+
+  steps_per_puzzle: avg=11.79, med=11.00, min=1, max=28
+
+  total_completion_tokens_per_puzzle: avg=21115.56, med=20018.00, min=2615, max=61154
+Difficulty 2
+  total puzzles:        118
+  wins:       16.10% (19)
+  fails:     83.90% (99)
+  terminated runs:     72.88% (86)
+  truncated runs:      27.12% (32)
+  average_completion_tokens_per_puzzle: avg=1578.38, med=810.50, min=113, max=11034
+
+  steps_per_puzzle: avg=13.40, med=13.00, min=1, max=30
+
+  total_completion_tokens_per_puzzle: avg=20575.98, med=17481.50, min=682, max=58814
+Difficulty 3
+  total puzzles:        121
+  wins:       5.79% (7)
+  fails:     94.21% (114)
+  terminated runs:     79.34% (96)
+  truncated runs:      20.66% (25)
+  average_completion_tokens_per_puzzle: avg=1520.35, med=736.00, min=109, max=11376
+
+  steps_per_puzzle: avg=11.80, med=11.00, min=1, max=25
+
+  total_completion_tokens_per_puzzle: avg=17342.00, med=14429.00, min=1936, max=53554
+Difficulty 4
+  total puzzles:        86
+  wins:       3.49% (3)
+  fails:     96.51% (83)
+  terminated runs:     74.42% (64)
+  truncated runs:      25.58% (22)
+  average_completion_tokens_per_puzzle: avg=1397.44, med=774.00, min=101, max=8531
+
+  steps_per_puzzle: avg=14.67, med=14.00, min=1, max=34
+
+  total_completion_tokens_per_puzzle: avg=20620.22, med=19794.50, min=1762, max=54971
+Difficulty 5
+  total puzzles:        89
+  wins:       1.12% (1)
+  fails:     98.88% (88)
+  terminated runs:     82.02% (73)
+  truncated runs:      17.98% (16)
+  average_completion_tokens_per_puzzle: avg=1334.50, med=705.50, min=102, max=9933
+
+  steps_per_puzzle: avg=17.29, med=15.00, min=5, max=47
+
+  total_completion_tokens_per_puzzle: avg=23723.89, med=21209.00, min=3923, max=83805
