@@ -15,7 +15,7 @@
 set -euo pipefail
 
 # defaults (can be overridden via env or sbatch --export)
-INPUT="${INPUT:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/sparc/lkaesberg_Qwen3-32B-SPaRC-GRPO-L.jsonl}"
+INPUT="${INPUT:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/human_annotation/annotation_samples.jsonl}"
 OUTPUT="${OUTPUT:-}"
 MODEL="${MODEL:-Qwen/Qwen3-32B}"
 PORT="${LLM_PORT:-8000}"
