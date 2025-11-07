@@ -1,0 +1,11 @@
+total puzzles: 500
+wins: 12.00% (60)
+fails: 88.00% (440)
+terminated runs:      75.20% (376)
+truncated runs:       24.80% (124)
+average_completion_tokens_per_puzzle:
+  avg=1531.14, med=783.25, min=101, max=12266
+steps_per_puzzle:
+  avg=13.65, med=13.00, min=1, max=47
+total_completion_tokens_per_puzzle:
+  avg=20454.10, med=18322.00, min=682, max=83805
