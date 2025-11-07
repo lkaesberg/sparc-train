@@ -126,6 +126,40 @@ Each line in the annotated output is the original JSON object with a new key
 }
 ```
 
+## Annotation Comparison
+
+To compare human annotations with machine (LLM) annotations and calculate the
+macro F1 score, use the comparison script:
+
+```bash
+python analyze/compare_annotations.py
+```
+
+This script:
+- Compares human annotations from `analyze/results/human_annotation/martinajuharova_sparc_annotated.jsonl`
+- Against all machine-annotated files with prefix `annotation_samples` in `analyze/results/annotate/`
+- Matches samples by puzzle ID
+- Calculates macro F1, precision, and recall across all 6 failure categories (A-F)
+- Outputs per-category metrics and a summary comparison table
+
+The script automatically converts human annotation codes (e.g., `a_planning_logical_flaw`)
+to LLM letter codes (e.g., `A`) for comparison.
+
+Example output:
+```
+Macro-averaged metrics:
+  F1 Score:  0.3904
+  Precision: 0.4850
+  Recall:    0.4284
+
+Per-category metrics:
+  Category   F1       Precision  Recall   Support 
+  ------------------------------------------------------
+  A          0.0000   0.0000     0.0000   1       
+  B          0.6786   0.9268     0.5352   71      
+  ...
+```
+
 ## Dataset Sample Structure
 
 Each entry in the JSONL result files (`analyze/results/sparc/*.jsonl`) contains the following keys:
