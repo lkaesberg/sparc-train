@@ -128,37 +128,71 @@ Each line in the annotated output is the original JSON object with a new key
 
 ## Annotation Comparison
 
-To compare human annotations with machine (LLM) annotations and calculate the
-macro F1 score, use the comparison script:
+### Basic Comparison (Single Annotator)
+
+To compare human annotations with machine (LLM) annotations:
 
 ```bash
 python analyze/compare_annotations.py
 ```
 
 This script:
-- Compares human annotations from `analyze/results/human_annotation/martinajuharova_sparc_annotated.jsonl`
+- Compares human annotations from `analyze/results/human_annotation/hagenkort_sparc_annotated.jsonl`
 - Against all machine-annotated files with prefix `annotation_samples` in `analyze/results/annotate/`
 - Matches samples by line number (validates that puzzle IDs match at each line)
 - Calculates macro F1, precision, and recall across all 6 failure categories (A-F)
 - Outputs per-category metrics and a summary comparison table
 
-The script automatically converts human annotation codes (e.g., `a_planning_logical_flaw`)
-to LLM letter codes (e.g., `A`) for comparison.
+### Enhanced Comparison with Inter-Annotator Agreement
+
+For comprehensive analysis with multiple human annotators:
+
+```bash
+python analyze/compare_annotations_with_iaa.py
+```
+
+This enhanced script:
+- **Calculates inter-annotator agreement** between 3 human annotators using:
+  - Pairwise F1 scores between all annotator pairs
+  - Fleiss' Kappa for multi-rater agreement (per category)
+- **Creates majority-vote baseline** (annotations appearing in ≥2/3 annotators)
+- **Compares LLM models** against individual annotators and majority vote
+- **Ranks models** in a summary table sorted by F1 score
+- Shows per-category performance breakdown
 
 Example output:
 ```
-Macro-averaged metrics:
-  F1 Score:  0.3904
-  Precision: 0.4850
-  Recall:    0.4284
+MODEL COMPARISON TABLE (vs Majority Vote ≥2/3)
+================================================================================
+Model                                         F1         Precision    Recall    
+-----------------------------------------------------------------------------
+openai_gpt-oss-120b                           0.4993     0.4809       0.5827    
+openai_gpt-oss-20b                            0.4677     0.3650       0.6903    
+Qwen_Qwen3-32B                                0.3807     0.4297       0.4292    
+...
+-----------------------------------------------------------------------------
+Human Baseline (Avg Pairwise)                 0.3896     N/A          N/A       
 
-Per-category metrics:
-  Category   F1       Precision  Recall   Support 
-  ------------------------------------------------------
-  A          0.0000   0.0000     0.0000   1       
-  B          0.6786   0.9268     0.5352   71      
-  ...
+PER-CATEGORY F1 SCORES (vs Majority Vote ≥2/3)
+================================================================================
+Model                                         A        B        C        D        E        F       
+openai_gpt-oss-120b                           0.0000   0.6607   0.2857   0.5714   0.6316   0.8462
+...
+
+Best Performing Models (vs Majority Vote):
+  1. openai_gpt-oss-120b: F1 = 0.4993 (above human baseline)
+  2. openai_gpt-oss-20b: F1 = 0.4677 (above human baseline)
+  3. Qwen_Qwen3-32B: F1 = 0.3807 (below human baseline)
 ```
+
+**Key Insights:**
+- Human annotators achieve ~39% average pairwise F1, showing annotation difficulty
+- Top LLM models (50% F1) exceed human baseline, validating the approach
+- Categories E and F show moderate human agreement (Kappa ~0.5-0.6)
+- Categories A, B, C show low human agreement, indicating ambiguity
+
+The script automatically converts human annotation codes (e.g., `a_planning_logical_flaw`)
+to LLM letter codes (e.g., `A`) for comparison.
 
 ## Dataset Sample Structure
 
