@@ -44,12 +44,12 @@ module load gcc/13.2.0 cuda/12.6.2 apptainer
 
 LOG_FILE="results/annotate/logs/vllm_annotate_${SLURM_JOB_ID:-$$}.log"
 echo "Starting vLLM server (model=$MODEL) -> $LOG_FILE"
-apptainer exec -B $HF_HOME:$HF_HOME:rw --nv ~/vllm-gptoss.sif vllm serve "$MODEL" \
+apptainer exec -B $HF_HOME:$HF_HOME:rw --nv --cleanenv ~/vllm-gptoss.sif vllm serve "$MODEL" \
   --port "$PORT" \
   --tensor-parallel-size "$TP_SIZE" \
   --gpu-memory-utilization "$GPU_UTIL" \
   --trust-remote-code \
-  --download-dir $HF_HOME
+  --download-dir $HF_HOME \
   >"$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 
