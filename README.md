@@ -138,7 +138,7 @@ python analyze/compare_annotations.py
 This script:
 - Compares human annotations from `analyze/results/human_annotation/martinajuharova_sparc_annotated.jsonl`
 - Against all machine-annotated files with prefix `annotation_samples` in `analyze/results/annotate/`
-- Matches samples by puzzle ID
+- Matches samples by line number (validates that puzzle IDs match at each line)
 - Calculates macro F1, precision, and recall across all 6 failure categories (A-F)
 - Outputs per-category metrics and a summary comparison table
 

@@ -6,9 +6,9 @@ This script calculates the macro F1 score between human failure annotations
 and machine (LLM) annotations for SPaRC puzzle results.
 
 The script compares annotations by:
-1. Loading human annotations from analyze/results/human_annotation/martinajuharova_sparc_annotated.jsonl
+1. Loading human annotations from analyze/results/human_annotation/hagenkortjuharova_sparc_annotated.jsonl
 2. Finding all machine annotation files with prefix "annotation_samples" in analyze/results/annotate/
-3. Matching samples by puzzle ID
+3. Matching samples by line number (validates that puzzle IDs match at each line)
 4. Converting human annotation codes (a_*, b_*, etc.) to LLM letter codes (A, B, etc.)
 5. Calculating macro F1 score across all 6 failure categories (A-F)
 
@@ -156,6 +156,7 @@ def calculate_metrics(human_annotations: List[Set[str]],
 def compare_annotations(human_file: Path, machine_file: Path) -> Dict:
     """
     Compare human and machine annotations from two JSONL files.
+    Matches samples by line number and validates that IDs match.
     
     Args:
         human_file: Path to human annotations file
@@ -163,39 +164,53 @@ def compare_annotations(human_file: Path, machine_file: Path) -> Dict:
     
     Returns:
         Dictionary with comparison metrics
+    
+    Raises:
+        ValueError: If IDs don't match at the same line number
     """
     # Load data
     human_data = load_jsonl(human_file)
     machine_data = load_jsonl(machine_file)
     
-    # Create index by puzzle ID
-    human_by_id = {sample['id']: sample for sample in human_data}
-    machine_by_id = {sample['id']: sample for sample in machine_data}
+    # Check that files have the same number of lines
+    if len(human_data) != len(machine_data):
+        print(f"Warning: Files have different lengths:")
+        print(f"  Human: {len(human_data)} lines")
+        print(f"  Machine: {len(machine_data)} lines")
+        print(f"  Will compare only the first {min(len(human_data), len(machine_data))} lines")
     
-    # Find common puzzle IDs
-    common_ids = set(human_by_id.keys()) & set(machine_by_id.keys())
-    
-    if not common_ids:
-        print(f"Warning: No common puzzle IDs found between {human_file.name} and {machine_file.name}")
-        return None
-    
-    # Extract annotations for common samples
+    # Match by line number and validate IDs match
     human_annotations = []
     llm_annotations = []
+    n_compared = 0
     
-    for puzzle_id in sorted(common_ids):
-        human_cats = extract_human_annotations(human_by_id[puzzle_id])
-        llm_cats = extract_llm_annotations(machine_by_id[puzzle_id])
+    for line_num, (human_sample, machine_sample) in enumerate(zip(human_data, machine_data), start=1):
+        human_id = human_sample.get('id')
+        machine_id = machine_sample.get('id')
+        
+        # Validate IDs match
+        if human_id != machine_id:
+            raise ValueError(
+                f"ID mismatch at line {line_num}:\n"
+                f"  Human file ({human_file.name}): id = '{human_id}'\n"
+                f"  Machine file ({machine_file.name}): id = '{machine_id}'\n"
+                f"Files must have samples in the same order with matching IDs."
+            )
+        
+        # Extract annotations
+        human_cats = extract_human_annotations(human_sample)
+        llm_cats = extract_llm_annotations(machine_sample)
         
         human_annotations.append(human_cats)
         llm_annotations.append(llm_cats)
+        n_compared += 1
     
     # Calculate metrics
     metrics = calculate_metrics(human_annotations, llm_annotations, ALL_CATEGORIES)
     
     return {
         'machine_file': machine_file.name,
-        'n_common_samples': len(common_ids),
+        'n_compared_samples': n_compared,
         'n_human_samples': len(human_data),
         'n_machine_samples': len(machine_data),
         **metrics
@@ -209,8 +224,8 @@ def main():
     human_dir = script_dir / 'results' / 'human_annotation'
     machine_dir = script_dir / 'results' / 'annotate'
     
-    # Find human annotation file (martinajuharova_sparc_annotated.jsonl)
-    human_files = list(human_dir.glob('martina*.jsonl'))
+    # Find human annotation file (hagenkortjuharova_sparc_annotated.jsonl)
+    human_files = list(human_dir.glob('hagenkort*.jsonl'))
     
     if not human_files:
         print(f"Error: No human annotation file found in {human_dir}")
@@ -246,7 +261,7 @@ def main():
             print(f"\nSamples:")
             print(f"  Human annotations: {results['n_human_samples']}")
             print(f"  Machine annotations: {results['n_machine_samples']}")
-            print(f"  Common samples: {results['n_common_samples']}")
+            print(f"  Compared samples: {results['n_compared_samples']}")
             
             print(f"\nMacro-averaged metrics:")
             print(f"  F1 Score:  {results['macro_f1']:.4f}")
