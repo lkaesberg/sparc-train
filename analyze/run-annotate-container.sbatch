@@ -17,7 +17,7 @@ set -euo pipefail
 # defaults (can be overridden via env or sbatch --export)
 INPUT="${INPUT:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/human_annotation/annotation_samples.jsonl}"
 OUTPUT="${OUTPUT:-}"
-MODEL="${MODEL:-Qwen/Qwen3-32B}"
+MODEL="${MODEL:-openai/gpt-oss-120b}"
 PORT="${LLM_PORT:-8000}"
 # how many final sentences from the solver trace to include in the prompt
 LAST_N_SENTENCES="${LAST_N_SENTENCES:-100}"
@@ -44,8 +44,7 @@ module load gcc/13.2.0 cuda/12.6.2 apptainer
 
 LOG_FILE="results/annotate/logs/vllm_annotate_${SLURM_JOB_ID:-$$}.log"
 echo "Starting vLLM server (model=$MODEL) -> $LOG_FILE"
-apptainer run --nv ~/vllm-gptoss.sif vllm serve \
-  --model "$MODEL" \
+apptainer exec --nv ~/vllm-gptoss.sif vllm serve "$MODEL" \
   --port "$PORT" \
   --tensor-parallel-size "$TP_SIZE" \
   --gpu-memory-utilization "$GPU_UTIL" \
