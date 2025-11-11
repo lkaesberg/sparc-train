@@ -6,7 +6,7 @@ This script:
 1. Calculates inter-annotator agreement (IAA) between human annotators
 2. Creates a majority-vote baseline (annotations appearing in at least 2/3 annotators)
 3. Compares LLM annotations against individual annotators and majority vote
-4. Calculates macro F1, precision, and recall across all 6 failure categories (A-F)
+4. Calculates macro F1, precision, recall, and Hamming loss across all 6 failure categories (A-F)
 
 Failure categories:
   A: Planning/logical flaw in the reasoning approach
@@ -116,11 +116,49 @@ def calculate_binary_metrics(y_true: List[int], y_pred: List[int]) -> Tuple[floa
     return precision, recall, f1
 
 
+def calculate_hamming_loss(human_annotations: List[Set[str]], 
+                           llm_annotations: List[Set[str]],
+                           all_categories: List[str]) -> float:
+    """
+    Calculate Hamming loss for multi-label classification.
+    
+    Hamming loss is the fraction of labels that are incorrectly predicted.
+    Lower is better (0 = perfect, 1 = all wrong).
+    
+    Args:
+        human_annotations: List of sets containing human annotation categories
+        llm_annotations: List of sets containing LLM annotation categories
+        all_categories: List of all possible category codes
+    
+    Returns:
+        Hamming loss value (0 to 1)
+    """
+    n_samples = len(human_annotations)
+    n_labels = len(all_categories)
+    
+    if n_samples == 0 or n_labels == 0:
+        return 0.0
+    
+    total_incorrect = 0
+    for human_cats, llm_cats in zip(human_annotations, llm_annotations):
+        # For each sample, count incorrect predictions
+        for category in all_categories:
+            human_has = category in human_cats
+            llm_has = category in llm_cats
+            # XOR: incorrect if they differ
+            if human_has != llm_has:
+                total_incorrect += 1
+    
+    # Hamming loss = (incorrect labels) / (total samples * total labels)
+    hamming_loss = total_incorrect / (n_samples * n_labels)
+    return hamming_loss
+
+
 def calculate_metrics(human_annotations: List[Set[str]], 
                       llm_annotations: List[Set[str]],
                       all_categories: List[str]) -> Dict:
     """
-    Calculate macro F1, precision, and recall scores.
+    Calculate macro F1, precision, recall, and Hamming loss.
     
     Args:
         human_annotations: List of sets containing human annotation categories
@@ -155,10 +193,14 @@ def calculate_metrics(human_annotations: List[Set[str]],
     macro_recall = sum(m['recall'] for m in per_category_metrics.values()) / len(all_categories)
     macro_f1 = sum(m['f1'] for m in per_category_metrics.values()) / len(all_categories)
     
+    # Calculate Hamming loss
+    hamming_loss = calculate_hamming_loss(human_annotations, llm_annotations, all_categories)
+    
     return {
         'macro_f1': macro_f1,
         'macro_precision': macro_precision,
         'macro_recall': macro_recall,
+        'hamming_loss': hamming_loss,
         'per_category': per_category_metrics,
         'n_samples': n_samples
     }
@@ -497,9 +539,10 @@ def main():
         # Compare against majority vote
         print(f"\nComparison with majority vote (≥2/3):")
         majority_metrics = calculate_metrics(majority_annotations, llm_annotations_filtered, categories_to_analyze)
-        print(f"  Macro F1:     {majority_metrics['macro_f1']:.4f}")
-        print(f"  Precision:    {majority_metrics['macro_precision']:.4f}")
-        print(f"  Recall:       {majority_metrics['macro_recall']:.4f}")
+        print(f"  Macro F1:      {majority_metrics['macro_f1']:.4f}")
+        print(f"  Precision:     {majority_metrics['macro_precision']:.4f}")
+        print(f"  Recall:        {majority_metrics['macro_recall']:.4f}")
+        print(f"  Hamming Loss:  {majority_metrics['hamming_loss']:.4f} (lower is better)")
         
         print(f"\n  Per-category metrics vs majority vote:")
         print(f"  {'Category':<10} {'F1':<8} {'Precision':<10} {'Recall':<8} {'Support':<8}")
@@ -518,6 +561,7 @@ def main():
             'majority_f1': majority_metrics['macro_f1'],
             'majority_precision': majority_metrics['macro_precision'],
             'majority_recall': majority_metrics['macro_recall'],
+            'hamming_loss': majority_metrics['hamming_loss'],
             'avg_individual_f1': avg_individual_f1,
             'per_category_f1': {cat: majority_metrics['per_category'][cat]['f1'] for cat in categories_to_analyze}
         })
@@ -528,16 +572,18 @@ def main():
     print(f"\n{'=' * 80}")
     print("MODEL COMPARISON TABLE (vs Majority Vote ≥2/3)")
     print(f"{'=' * 80}")
-    print(f"\n{'Model':<45} {'F1':<10} {'Precision':<12} {'Recall':<10}")
-    print(f"{'-' * 77}")
+    print(f"\n{'Model':<45} {'F1':<10} {'Precision':<12} {'Recall':<10} {'Hamming':<10}")
+    print(f"{'-' * 87}")
     
     for result in all_model_results:
         print(f"{result['model']:<45} {result['majority_f1']:<10.4f} "
-              f"{result['majority_precision']:<12.4f} {result['majority_recall']:<10.4f}")
+              f"{result['majority_precision']:<12.4f} {result['majority_recall']:<10.4f} "
+              f"{result['hamming_loss']:<10.4f}")
     
     # Add human baseline
-    print(f"{'-' * 77}")
-    print(f"{'Human Baseline (Avg Pairwise)':<45} {avg_pairwise_f1:<10.4f} {'N/A':<12} {'N/A':<10}")
+    print(f"{'-' * 87}")
+    print(f"{'Human Baseline (Avg Pairwise)':<45} {avg_pairwise_f1:<10.4f} {'N/A':<12} {'N/A':<10} {'N/A':<10}")
+    print(f"\nNote: Hamming Loss = fraction of incorrectly predicted labels (lower is better, 0 = perfect)")
     
     # Per-category comparison table
     print(f"\n{'=' * 80}")

@@ -163,40 +163,47 @@ This enhanced script:
 - **Compares LLM models** against individual annotators and majority vote
 - **Ranks models** in a summary table sorted by F1 score
 - Shows per-category performance breakdown
+- **Calculates Hamming loss** - fraction of incorrectly predicted labels (multi-label metric)
 - **Supports category filtering** via `--exclude-categories` to remove low-support or problematic categories
 
 Example output:
 ```
 MODEL COMPARISON TABLE (vs Majority Vote ≥2/3)
 ================================================================================
-Model                                         F1         Precision    Recall    
------------------------------------------------------------------------------
-openai_gpt-oss-120b                           0.4993     0.4809       0.5827    
-openai_gpt-oss-20b                            0.4677     0.3650       0.6903    
-Qwen_Qwen3-32B                                0.3807     0.4297       0.4292    
+Model                                         F1         Precision    Recall     Hamming   
+---------------------------------------------------------------------------------------
+openai_gpt-oss-120b                           0.5991     0.5771       0.6992     0.2200    
+openai_gpt-oss-20b                            0.5533     0.4337       0.7784     0.2740    
+Qwen_Qwen3-32B                                0.4568     0.5157       0.5151     0.2180    
 ...
------------------------------------------------------------------------------
-Human Baseline (Avg Pairwise)                 0.3896     N/A          N/A       
+---------------------------------------------------------------------------------------
+Human Baseline (Avg Pairwise)                 0.4553     N/A          N/A        N/A       
+
+Note: Hamming Loss = fraction of incorrectly predicted labels (lower is better, 0 = perfect)
 
 PER-CATEGORY F1 SCORES (vs Majority Vote ≥2/3)
 ================================================================================
-Model                                         A        B        C        D        E        F       
-openai_gpt-oss-120b                           0.0000   0.6607   0.2857   0.5714   0.6316   0.8462
+Model                                         B        C        D        E        F       
+openai_gpt-oss-120b                           0.6607   0.2857   0.5714   0.6316   0.8462
 ...
 
 Best Performing Models (vs Majority Vote):
-  1. openai_gpt-oss-120b: F1 = 0.4993 (above human baseline)
-  2. openai_gpt-oss-20b: F1 = 0.4677 (above human baseline)
-  3. Qwen_Qwen3-32B: F1 = 0.3807 (below human baseline)
+  1. openai_gpt-oss-120b: F1 = 0.5991 (above human baseline)
+  2. openai_gpt-oss-20b: F1 = 0.5533 (above human baseline)
+  3. Qwen_Qwen3-32B: F1 = 0.4568 (below human baseline)
+
+(Results shown with --exclude-categories A)
 ```
 
 **Key Insights:**
 - Human annotators achieve ~39% average pairwise F1 (46% when excluding Category A), showing annotation difficulty
 - Top LLM models (50% F1, 60% without Category A) exceed human baseline, validating the approach
+- **Hamming loss** ranges from 0.22-0.34 for top models (~22-34% of labels incorrect), complementing F1 scores
 - Categories E and F show moderate human agreement (Kappa ~0.5-0.6)
 - Categories A, B, C show low human agreement, indicating ambiguity
 - **Category A** has very low support (4 samples) and poor agreement - consider excluding with `--exclude-categories A`
 - Excluding low-support categories can significantly improve reported metrics (e.g., +20% F1 for top models)
+- Best models achieve **~22% Hamming loss** (openai_gpt-oss-120b, Qwen_Qwen3-32B) = 78% label accuracy
 
 The script automatically converts human annotation codes (e.g., `a_planning_logical_flaw`)
 to LLM letter codes (e.g., `A`) for comparison.
