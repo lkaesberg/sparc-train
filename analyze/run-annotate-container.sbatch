@@ -17,7 +17,7 @@ set -euo pipefail
 # defaults (can be overridden via env or sbatch --export)
 INPUT="${INPUT:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/human_annotation/annotation_samples.jsonl}"
 OUTPUT="${OUTPUT:-}"
-MODEL="${MODEL:-openai/gpt-oss-120b}"
+MODEL="${MODEL:-RedHatAI/Llama-4-Scout-17B-16E-Instruct-quantized.w4a16}"
 PORT="${LLM_PORT:-8000}"
 # how many final sentences from the solver trace to include in the prompt
 LAST_N_SENTENCES="${LAST_N_SENTENCES:-100}"
@@ -50,6 +50,7 @@ apptainer exec -B $HF_HOME:$HF_HOME:rw --nv --cleanenv ~/vllm-gptoss.sif vllm se
   --gpu-memory-utilization "$GPU_UTIL" \
   --trust-remote-code \
   --download-dir $HF_HOME \
+  --max-model-len 100000 \
   >"$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 
