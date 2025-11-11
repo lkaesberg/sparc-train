@@ -18,6 +18,8 @@ Failure categories:
 
 Usage:
     python analyze/compare_annotations_with_iaa.py
+    python analyze/compare_annotations_with_iaa.py --exclude-categories A
+    python analyze/compare_annotations_with_iaa.py --exclude-categories A,C
 """
 
 import json
@@ -25,6 +27,7 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from itertools import combinations
 import statistics
+import argparse
 
 
 # Mapping from human annotation codes to LLM letter codes
@@ -74,6 +77,21 @@ def extract_llm_annotations(sample: Dict) -> Set[str]:
     
     categories = sample['llm_annotation'].get('categories', [])
     return set(categories)
+
+
+def filter_annotations(annotations: List[Set[str]], categories_to_keep: List[str]) -> List[Set[str]]:
+    """
+    Filter annotations to only include specified categories.
+    
+    Args:
+        annotations: List of annotation sets
+        categories_to_keep: List of category codes to keep
+    
+    Returns:
+        Filtered list of annotation sets
+    """
+    categories_set = set(categories_to_keep)
+    return [cats & categories_set for cats in annotations]
 
 
 def calculate_binary_metrics(y_true: List[int], y_pred: List[int]) -> Tuple[float, float, float]:
@@ -248,6 +266,37 @@ def calculate_fleiss_kappa_per_category(all_human_annotations: List[List[Set[str
 
 def main():
     """Main function to compare human and machine annotations with IAA."""
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='Compare human and machine annotations with inter-annotator agreement analysis.',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        '--exclude-categories',
+        type=str,
+        default='',
+        help='Comma-separated list of categories to exclude (e.g., "A,C" to exclude categories A and C)'
+    )
+    args = parser.parse_args()
+    
+    # Parse excluded categories
+    excluded_categories = set()
+    if args.exclude_categories:
+        excluded_categories = set(cat.strip().upper() for cat in args.exclude_categories.split(','))
+        # Validate categories
+        invalid_cats = excluded_categories - set(ALL_CATEGORIES)
+        if invalid_cats:
+            print(f"Error: Invalid categories: {', '.join(invalid_cats)}")
+            print(f"Valid categories are: {', '.join(ALL_CATEGORIES)}")
+            return
+    
+    # Filter categories to analyze
+    categories_to_analyze = [cat for cat in ALL_CATEGORIES if cat not in excluded_categories]
+    
+    if not categories_to_analyze:
+        print("Error: Cannot exclude all categories!")
+        return
+    
     # Define paths
     script_dir = Path(__file__).parent
     human_dir = script_dir / 'results' / 'human_annotation'
@@ -269,6 +318,14 @@ def main():
     print(f"{'=' * 80}")
     print("INTER-ANNOTATOR AGREEMENT ANALYSIS")
     print(f"{'=' * 80}")
+    
+    # Display category filter information
+    if excluded_categories:
+        print(f"\n⚠️  FILTERING: Excluding categories: {', '.join(sorted(excluded_categories))}")
+        print(f"    Analyzing categories: {', '.join(categories_to_analyze)}")
+    else:
+        print(f"\n    Analyzing all categories: {', '.join(categories_to_analyze)}")
+    
     print(f"\nLoading {len(human_files)} human annotation files:")
     for f in human_files:
         print(f"  - {f.name}")
@@ -297,7 +354,9 @@ def main():
     all_human_annotations = []
     for human_data in all_human_data:
         annotations = [extract_human_annotations(sample) for sample in human_data]
-        all_human_annotations.append(annotations)
+        # Filter to only include categories we're analyzing
+        filtered_annotations = filter_annotations(annotations, categories_to_analyze)
+        all_human_annotations.append(filtered_annotations)
     
     # Calculate pairwise agreement between human annotators
     print(f"\n{'=' * 80}")
@@ -311,14 +370,14 @@ def main():
         metrics = calculate_pairwise_agreement(
             all_human_annotations[i], 
             all_human_annotations[j],
-            ALL_CATEGORIES
+            categories_to_analyze
         )
         pairwise_f1_scores.append(metrics['macro_f1'])
         
         print(f"\n{name1} vs {name2}:")
         print(f"  Macro F1: {metrics['macro_f1']:.4f}")
         print(f"  Per-category F1:")
-        for cat in ALL_CATEGORIES:
+        for cat in categories_to_analyze:
             cat_f1 = metrics['per_category'][cat]['f1']
             print(f"    {cat}: {cat_f1:.4f}")
     
@@ -334,7 +393,7 @@ def main():
     print(f"\nPer-category Fleiss' Kappa:")
     
     kappa_scores = []
-    for cat in ALL_CATEGORIES:
+    for cat in categories_to_analyze:
         kappa = calculate_fleiss_kappa_per_category(all_human_annotations, cat)
         kappa_scores.append(kappa)
         
@@ -365,13 +424,14 @@ def main():
     majority_annotations = create_majority_vote(all_human_annotations, min_votes=2)
     
     # Show distribution of majority annotations
-    majority_category_counts = {cat: 0 for cat in ALL_CATEGORIES}
+    majority_category_counts = {cat: 0 for cat in categories_to_analyze}
     for sample_cats in majority_annotations:
         for cat in sample_cats:
-            majority_category_counts[cat] += 1
+            if cat in categories_to_analyze:
+                majority_category_counts[cat] += 1
     
     print(f"\nMajority-vote annotation counts:")
-    for cat in ALL_CATEGORIES:
+    for cat in categories_to_analyze:
         print(f"  {cat}: {majority_category_counts[cat]} samples")
     
     # Find machine annotation files
@@ -410,8 +470,9 @@ def main():
             print(f"\nError: {e}")
             continue
         
-        # Extract LLM annotations
+        # Extract LLM annotations and filter to categories being analyzed
         llm_annotations = [extract_llm_annotations(sample) for sample in machine_data]
+        llm_annotations_filtered = filter_annotations(llm_annotations, categories_to_analyze)
         
         model_name = machine_file.name.replace('annotation_samples.annotated_by_', '').replace('.jsonl', '')
         if model_name == 'annotation_samples.annotated':
@@ -426,7 +487,7 @@ def main():
         individual_f1_scores = []
         
         for i, name in enumerate(annotator_names):
-            metrics = calculate_metrics(all_human_annotations[i], llm_annotations, ALL_CATEGORIES)
+            metrics = calculate_metrics(all_human_annotations[i], llm_annotations_filtered, categories_to_analyze)
             individual_f1_scores.append(metrics['macro_f1'])
             print(f"  {name}: Macro F1 = {metrics['macro_f1']:.4f}")
         
@@ -435,7 +496,7 @@ def main():
         
         # Compare against majority vote
         print(f"\nComparison with majority vote (≥2/3):")
-        majority_metrics = calculate_metrics(majority_annotations, llm_annotations, ALL_CATEGORIES)
+        majority_metrics = calculate_metrics(majority_annotations, llm_annotations_filtered, categories_to_analyze)
         print(f"  Macro F1:     {majority_metrics['macro_f1']:.4f}")
         print(f"  Precision:    {majority_metrics['macro_precision']:.4f}")
         print(f"  Recall:       {majority_metrics['macro_recall']:.4f}")
@@ -444,7 +505,7 @@ def main():
         print(f"  {'Category':<10} {'F1':<8} {'Precision':<10} {'Recall':<8} {'Support':<8}")
         print(f"  {'-' * 54}")
         
-        for cat in ALL_CATEGORIES:
+        for cat in categories_to_analyze:
             cat_metrics = majority_metrics['per_category'][cat]
             print(f"  {cat:<10} {cat_metrics['f1']:<8.4f} "
                   f"{cat_metrics['precision']:<10.4f} "
@@ -458,7 +519,7 @@ def main():
             'majority_precision': majority_metrics['macro_precision'],
             'majority_recall': majority_metrics['macro_recall'],
             'avg_individual_f1': avg_individual_f1,
-            'per_category_f1': {cat: majority_metrics['per_category'][cat]['f1'] for cat in ALL_CATEGORIES}
+            'per_category_f1': {cat: majority_metrics['per_category'][cat]['f1'] for cat in categories_to_analyze}
         })
     
     # Sort models by F1 score (descending)
@@ -482,11 +543,15 @@ def main():
     print(f"\n{'=' * 80}")
     print("PER-CATEGORY F1 SCORES (vs Majority Vote ≥2/3)")
     print(f"{'=' * 80}")
-    print(f"\n{'Model':<45} {'A':<8} {'B':<8} {'C':<8} {'D':<8} {'E':<8} {'F':<8}")
-    print(f"{'-' * 93}")
+    
+    # Build header dynamically based on categories being analyzed
+    header = f"\n{'Model':<45} " + ' '.join([f"{cat:<8}" for cat in categories_to_analyze])
+    print(header)
+    separator_length = 45 + 8 * len(categories_to_analyze) + len(categories_to_analyze) - 1
+    print(f"{'-' * separator_length}")
     
     for result in all_model_results:
-        cat_scores = ' '.join([f"{result['per_category_f1'][cat]:<8.4f}" for cat in ALL_CATEGORIES])
+        cat_scores = ' '.join([f"{result['per_category_f1'][cat]:<8.4f}" for cat in categories_to_analyze])
         print(f"{result['model']:<45} {cat_scores}")
     
     print(f"\n{'=' * 80}")

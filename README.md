@@ -149,6 +149,10 @@ For comprehensive analysis with multiple human annotators:
 
 ```bash
 python analyze/compare_annotations_with_iaa.py
+
+# Exclude specific categories (useful for low-support categories)
+python analyze/compare_annotations_with_iaa.py --exclude-categories A
+python analyze/compare_annotations_with_iaa.py --exclude-categories A,C
 ```
 
 This enhanced script:
@@ -159,6 +163,7 @@ This enhanced script:
 - **Compares LLM models** against individual annotators and majority vote
 - **Ranks models** in a summary table sorted by F1 score
 - Shows per-category performance breakdown
+- **Supports category filtering** via `--exclude-categories` to remove low-support or problematic categories
 
 Example output:
 ```
@@ -186,10 +191,12 @@ Best Performing Models (vs Majority Vote):
 ```
 
 **Key Insights:**
-- Human annotators achieve ~39% average pairwise F1, showing annotation difficulty
-- Top LLM models (50% F1) exceed human baseline, validating the approach
+- Human annotators achieve ~39% average pairwise F1 (46% when excluding Category A), showing annotation difficulty
+- Top LLM models (50% F1, 60% without Category A) exceed human baseline, validating the approach
 - Categories E and F show moderate human agreement (Kappa ~0.5-0.6)
 - Categories A, B, C show low human agreement, indicating ambiguity
+- **Category A** has very low support (4 samples) and poor agreement - consider excluding with `--exclude-categories A`
+- Excluding low-support categories can significantly improve reported metrics (e.g., +20% F1 for top models)
 
 The script automatically converts human annotation codes (e.g., `a_planning_logical_flaw`)
 to LLM letter codes (e.g., `A`) for comparison.
