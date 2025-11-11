@@ -71,6 +71,22 @@ def parse_model_info(filename):
     return size, 'unknown'
 
 
+def get_step_by_step_accuracy(summary_file):
+    """
+    Extract win rate from step-by-step summary file.
+    
+    Returns:
+        float: Win percentage
+    """
+    with open(summary_file, 'r') as f:
+        for line in f:
+            if line.startswith('wins:'):
+                # Parse "wins: 12.00% (60)"
+                percentage = line.split(':')[1].strip().split('%')[0]
+                return float(percentage)
+    return 0.0
+
+
 def collect_model_data(results_dir):
     """
     Collect all model data organized by size and variant.
@@ -95,6 +111,19 @@ def collect_model_data(results_dir):
         
         data[size][variant] = accuracy
     
+    # Load step-by-step results
+    step_by_step_dir = results_dir.parent / 'step-by-step'
+    if step_by_step_dir.exists():
+        for summary_file in step_by_step_dir.glob('summary_Qwen3-*.txt'):
+            # Extract size from filename (e.g., summary_Qwen3-32B.txt -> 32B)
+            size_match = re.search(r'Qwen3-(\d+\.?\d*B)', summary_file.name)
+            if size_match:
+                size = size_match.group(1)
+                accuracy = get_step_by_step_accuracy(summary_file)
+                if size not in data:
+                    data[size] = {}
+                data[size]['Step-by-Step'] = accuracy
+    
     return data
 
 
@@ -110,6 +139,8 @@ def create_comparison_chart(results_dir, output_path=None, model_sizes=None):
     setup_plot_style(use_latex=True)
     plt.rcParams["legend.fontsize"] = 8
     plt.rcParams["axes.labelsize"] = 8
+    # Add xcolor package for gray subscripts
+    plt.rcParams["text.latex.preamble"] = r"\usepackage{xcolor}"
 
     
     # Collect all model data
@@ -129,21 +160,29 @@ def create_comparison_chart(results_dir, output_path=None, model_sizes=None):
     n_models = len(model_sizes)
     
     # Define training variants (rows in the bottom section)
-    # Order requested: L, 16R, 8E, GRPO, SFT (reversed)
-    variants = ['16R', '8E', 'L', 'GRPO', 'SFT']
-    variant_labels = {v: v for v in variants}
+    # Order requested: L, 16R, 8E, GRPO, SFT (reversed), then Step-by-Step
+    # L = low format reward, 8E = more epochs, 16R = more rollouts
+    variants = ['16R', '8E', 'L', 'GRPO', 'SFT', 'Step-by-Step']
+    variant_labels = {
+        '16R': '$\\mathrm{16R}_{\\scriptscriptstyle\\scriptscriptstyle\\color{gray}\\mathrm{GRPO}}$',
+        '8E': '$\\mathrm{8Ep}_{\\scriptscriptstyle\\scriptscriptstyle\\color{gray}\\mathrm{GRPO}}$',
+        'L': '$\\mathrm{Low}_{\\scriptscriptstyle\\scriptscriptstyle\\color{gray}\\mathrm{GRPO}}$',
+        'GRPO': '$\\mathrm{Base}_{\\scriptscriptstyle\\scriptscriptstyle\\color{gray}\\mathrm{GRPO}}$',
+        'SFT': '$\\mathrm{Base}_{\\scriptscriptstyle\\scriptscriptstyle\\color{gray}\\mathrm{SFT}}$',
+        'Step-by-Step': 'Step-by-Step'
+    }
     
     # Calculate figure dimensions
     fig_width = TEXT_WIDTH_INCHES
-    # Top plot has 1 bar, bottom plot has 5 bars - use height ratio 1:5
+    # Top plot has 1 bar, bottom plot has 6 bars - use height ratio 1:6
     # Compact layout: less spacing, tighter bars
     row_height = 0.35  # inches per bar row (reduced from 0.5)
-    fig_height = 6 * row_height + 0.6  # 6 total bar rows + minimal spacing
+    fig_height = 7 * row_height + 0.6  # 7 total bar rows + minimal spacing
     print(f"Figure size: {fig_width:.2f} x {fig_height:.2f} inches")
     
-    # Create figure with height ratios (1 for top, 5 for bottom)
+    # Create figure with height ratios (1 for top, 6 for bottom)
     fig = plt.figure(figsize=(fig_width, fig_height))
-    gs = fig.add_gridspec(2, n_models, height_ratios=[1, 5], hspace=0.5, wspace=0.15)
+    gs = fig.add_gridspec(2, n_models, height_ratios=[1, 6], hspace=0.5, wspace=0.15)
     axes = np.array([[fig.add_subplot(gs[i, j]) for j in range(n_models)] for i in range(2)])
     
     # Adjust spacing (already set in gridspec)
@@ -203,7 +242,7 @@ def create_comparison_chart(results_dir, output_path=None, model_sizes=None):
 
         # Plot bars (use zero baseline and show delta values)
         y_pos = np.arange(len(variants))
-        bar_colors = [color if (not np.isnan(d) and d >= 0) else desaturate_color(color, 0.3) for d in deltas]
+        bar_colors = [color if not np.isnan(d) else desaturate_color(color, 0.3) for d in deltas]
         bars = ax.barh(y_pos, [0 if np.isnan(d) else d for d in deltas], color=bar_colors, height=0.6)
 
         # Add value labels (skip NaNs) - place on right side with black text
@@ -237,9 +276,11 @@ def create_comparison_chart(results_dir, output_path=None, model_sizes=None):
         ax.set_xlabel('$\\Delta$ Accuracy (\\%)')
         ax.axvline(0, color='black', linewidth=0.5, linestyle='-')
         
-        # Add separator line after SFT (between SFT and GRPO-based methods)
-        # SFT is at index 4 in our reversed list, so separator goes at y=3.5
+        # Add separator lines
+        # First separator: between GRPO (index 3) and SFT (index 4) at y=3.5
         ax.axhline(3.5, color='gray', linewidth=1.0, linestyle='--', alpha=0.5)
+        # Second separator: between SFT (index 4) and Step-by-Step (index 5) at y=4.5
+        ax.axhline(4.5, color='gray', linewidth=1.0, linestyle='--', alpha=0.5)
         
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
