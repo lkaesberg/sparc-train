@@ -1,0 +1,66 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║              ANNOTATION SCRIPT - QUICK REFERENCE CARD                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─ SINGLE FILE MODE ─────────────────────────────────────────────────────────┐
+│ Process one file (original behavior):                                      │
+│                                                                             │
+│   sbatch --export=INPUT=/path/to/file.jsonl analyze/run-annotate-container.sbatch
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ MULTI-FILE MODE ──────────────────────────────────────────────────────────┐
+│ Process multiple files matching a pattern:                                 │
+│                                                                             │
+│   # Example: All files with "lkaesberg_Qwen3-32B" in name                  │
+│   sbatch --export=FILE_PATTERN='*lkaesberg_Qwen3-32B*.jsonl' \            │
+│        analyze/run-annotate-container.sbatch                               │
+│                                                                             │
+│   # Example: All JSONL files in custom directory                           │
+│   sbatch --export=INPUT_DIR=/path/to/dir,FILE_PATTERN='*.jsonl' \         │
+│        analyze/run-annotate-container.sbatch                               │
+│                                                                             │
+│   # Example: With custom model                                             │
+│   sbatch --export=FILE_PATTERN='*Qwen*.jsonl',MODEL=llama/model \         │
+│        analyze/run-annotate-container.sbatch                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ KEY VARIABLES ────────────────────────────────────────────────────────────┐
+│                                                                             │
+│ SINGLE FILE:                                                                │
+│   INPUT           Path to input file (triggers single file mode)           │
+│   OUTPUT          Output path (optional)                                   │
+│                                                                             │
+│ MULTI FILE:                                                                 │
+│   INPUT_DIR       Directory to search (default: human_annotation/)         │
+│   FILE_PATTERN    Glob pattern (default: *lkaesberg_Qwen3-32B*.jsonl)      │
+│   OUTPUT_DIR      Output directory (default: results/annotate)             │
+│                                                                             │
+│ COMMON:                                                                     │
+│   MODEL           HuggingFace model name                                    │
+│   LLM_PORT        vLLM server port (default: 8000)                          │
+│   LAST_N_SENTENCES  Context sentences (default: 100)                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ HOW IT WORKS ─────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  1. Script determines mode based on INPUT variable                          │
+│     • If INPUT is set → Single file mode                                   │
+│     • If INPUT is empty → Multi-file mode                                  │
+│                                                                             │
+│  2. Finds all matching files (multi-file mode)                             │
+│                                                                             │
+│  3. Starts vLLM server ONCE                                                │
+│                                                                             │
+│  4. Processes each file sequentially                                        │
+│                                                                             │
+│  5. Stops vLLM server                                                      │
+│                                                                             │
+│  6. Reports summary (success/fail counts)                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+For detailed documentation, see: analyze/ANNOTATION_USAGE.md
+
