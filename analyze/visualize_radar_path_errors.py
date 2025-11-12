@@ -161,7 +161,7 @@ def generate_averaged_config_plot(results_dir, output_dir):
     ax.set_yticklabels(['20\\%', '40\\%', '60\\%'])
     
     ax.yaxis.grid(True, color='#888888', linestyle='-', linewidth=0.5, alpha=0.3)
-    ax.xaxis.grid(False)
+    ax.xaxis.grid(True, color='#888888', linestyle='-', linewidth=0.5, alpha=0.3)
     ax.spines['polar'].set_visible(False)
     
     # Set y-axis labels to appear in front of plot lines with white outline
