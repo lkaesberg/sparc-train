@@ -20,8 +20,8 @@ INPUT="${INPUT:-}"
 OUTPUT="${OUTPUT:-}"
 
 # For multi-file mode:
-INPUT_DIR="${INPUT_DIR:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/human_annotation}"
-FILE_PATTERN="${FILE_PATTERN:-*lkaesberg_Qwen3-32B*.jsonl}"
+INPUT_DIR="${INPUT_DIR:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/sparc}"
+FILE_PATTERN="${FILE_PATTERN:-*Qwen3-0.6B*.jsonl}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/annotate}"
 
 MODEL="${MODEL:-openai/gpt-oss-120b}"
