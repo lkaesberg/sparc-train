@@ -21,7 +21,7 @@ OUTPUT="${OUTPUT:-}"
 
 # For multi-file mode:
 INPUT_DIR="${INPUT_DIR:-/mnt/vast-standard/home/kaesberg1/u16096/sparc-train/analyze/results/sparc}"
-FILE_PATTERN="${FILE_PATTERN:-*Qwen3-0.6B*.jsonl}"
+FILE_PATTERN="${FILE_PATTERN:-Qwen_Qwen3-4B.jsonl}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/annotate}"
 
 MODEL="${MODEL:-openai/gpt-oss-120b}"
