@@ -253,11 +253,14 @@ def create_visualization(output_dir):
     
     # Create line plots with markers for deltas
     ax.plot(difficulties, sft_delta, marker='s', linewidth=1.5,
-            label='SFT', color=color_sft, markersize=4)
+            label='SFT', color=color_sft, markersize=4,
+            markeredgecolor='white', markeredgewidth=0.8)
     ax.plot(difficulties, grpo_l_delta, marker='^', linewidth=1.5,
-            label='GRPO', color=color_grpo_l, markersize=5)
+            label='GRPO', color=color_grpo_l, markersize=5,
+            markeredgecolor='white', markeredgewidth=0.8)
     ax.plot(difficulties, sbs_delta, marker='D', linewidth=1.5,
-            label='Step-by-Step', color=color_sbs, markersize=3.5)
+            label='Step-by-Step', color=color_sbs, markersize=3.5,
+            markeredgecolor='white', markeredgewidth=0.8)
     
     # Add horizontal line at y=0 (baseline)
     ax.axhline(y=0, color='gray', linestyle='--', linewidth=1, alpha=0.7, zorder=0)
