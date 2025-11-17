@@ -704,25 +704,24 @@ def create_efficiency_plot(all_stats, sparc_dir, step_by_step_dir, output_dir):
     # Create figure with reduced height
     fig, ax = plt.subplots(figsize=(COLUMN_WIDTH_INCHES, COLUMN_WIDTH_INCHES * 0.8))
     
-    # Define colors using Seaborn Set2 palette
-    import matplotlib.colors as mcolors
-    set2_colors = plt.cm.Set2.colors
+    # Define colors and markers using plot_config.py colors
+    from plot_config import get_training_method_color
     
     config_styles = {
         'Baseline': {
-            'color': mcolors.rgb2hex(set2_colors[3]),  # Pink/red
+            'color': get_training_method_color('Baseline'),
             'marker': 'o',
         },
         'SFT': {
-            'color': mcolors.rgb2hex(set2_colors[0]),  # Teal
+            'color': get_training_method_color('SFT'),
             'marker': 's',
         },
         'GRPO': {
-            'color': mcolors.rgb2hex(set2_colors[1]),  # Orange
+            'color': get_training_method_color('GRPO'),
             'marker': '^',
         },
         'Step-by-step': {
-            'color': mcolors.rgb2hex(set2_colors[2]),  # Green
+            'color': get_training_method_color('Step-by-step'),
             'marker': 'D',
         }
     }
@@ -739,10 +738,10 @@ def create_efficiency_plot(all_stats, sparc_dir, step_by_step_dir, output_dir):
         accuracy = config_data['accuracy'].values[0]
         tokens = config_data['tokens'].values[0]
         
-        # Plot marker (no transparency)
+        # Plot marker (no transparency) - swapped x and y
         ax.scatter(
-            accuracy,
             tokens,
+            accuracy,
             s=80,
             color=style.get('color'),
             marker=style.get('marker', 'o'),
@@ -753,33 +752,33 @@ def create_efficiency_plot(all_stats, sparc_dir, step_by_step_dir, output_dir):
             zorder=3
         )
         
-        # Add label next to the marker (closer)
+        # Add label next to the marker (closer) - adjusted for swapped axes
         ax.text(
-            accuracy + 0.8,  # smaller offset to the right
             tokens,
+            accuracy + 0.5,  # offset upward
             config,
             fontsize=9,
-            ha='left',
-            va='center',
+            ha='center',
+            va='bottom',
             color='black',
             fontweight='normal',
             zorder=4
         )
     
-    # Formatting
-    ax.set_xlabel('Accuracy (\\%)', fontsize=10)
-    ax.set_ylabel(r'Tokens per Answer ($\times$1000)', fontsize=10)
-    #ax.set_yscale('log')
+    # Formatting - swapped x and y labels
+    ax.set_xlabel(r'Tokens per Answer ($\times$1000)', fontsize=10)
+    ax.set_ylabel('Accuracy (\\%)', fontsize=10)
+    #ax.set_xscale('log')
     
     # Set x and y limits to start at 0
-    ax.set_xlim(0, 18)
+    ax.set_xlim(0, 26000)
     ax.set_ylim(0, None)
     
-    # Format y-axis to show ALL values in thousands with one decimal
+    # Format x-axis to show ALL values in thousands with one decimal
     from matplotlib.ticker import FuncFormatter
-    def format_thousands_y(x, pos):
+    def format_thousands_x(x, pos):
         return f'{x/1000:.1f}'
-    ax.yaxis.set_major_formatter(FuncFormatter(format_thousands_y))
+    ax.xaxis.set_major_formatter(FuncFormatter(format_thousands_x))
     
     # No legend needed since we have labels next to points
     # ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), 

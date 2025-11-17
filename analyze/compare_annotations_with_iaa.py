@@ -306,6 +306,208 @@ def calculate_fleiss_kappa_per_category(all_human_annotations: List[List[Set[str
     return kappa
 
 
+def generate_latex_table(
+    all_human_annotations: List[List[Set[str]]],
+    annotator_names: List[str],
+    categories_to_analyze: List[str],
+    pairwise_f1_scores: Dict[Tuple[str, str], float],
+    kappa_scores: Dict[str, float],
+    avg_pairwise_f1: float,
+    avg_kappa: float,
+    majority_annotations: List[Set[str]],
+    output_file: Path = None
+) -> str:
+    """
+    Generate a LaTeX table with human annotation statistics.
+    
+    Args:
+        all_human_annotations: List of [annotator1_annotations, annotator2_annotations, ...]
+        annotator_names: List of annotator names
+        categories_to_analyze: List of category codes to include
+        pairwise_f1_scores: Dictionary mapping (name1, name2) tuples to F1 scores
+        kappa_scores: Dictionary mapping category to Fleiss' Kappa
+        avg_pairwise_f1: Average pairwise F1 score
+        avg_kappa: Average Fleiss' Kappa
+        majority_annotations: List of majority-vote annotation sets
+        output_file: Optional path to save the LaTeX table
+    
+    Returns:
+        LaTeX table as a string
+    """
+    lines = []
+    
+    # Table 1: Annotation counts per category per annotator
+    lines.append("% Table 1: Annotation Counts per Category")
+    lines.append("\\begin{table}[htbp]")
+    lines.append("\\centering")
+    lines.append("\\caption{Human Annotation Statistics per Category}")
+    lines.append("\\label{tab:human_annotation_counts}")
+    lines.append("\\begin{tabular}{l" + "r" * (len(annotator_names) + 1) + "}")
+    lines.append("\\toprule")
+    
+    # Header
+    header = "Category & " + " & ".join(annotator_names) + " & Majority (≥2/3) \\\\"
+    lines.append(header)
+    lines.append("\\midrule")
+    
+    # Count annotations per category per annotator
+    for cat in categories_to_analyze:
+        counts = []
+        for annotations in all_human_annotations:
+            count = sum(1 for sample_cats in annotations if cat in sample_cats)
+            counts.append(str(count))
+        
+        # Majority vote count
+        majority_count = sum(1 for sample_cats in majority_annotations if cat in sample_cats)
+        
+        row = f"{cat} & " + " & ".join(counts) + f" & {majority_count} \\\\"
+        lines.append(row)
+    
+    # Total row
+    lines.append("\\midrule")
+    total_counts = []
+    for annotations in all_human_annotations:
+        total = sum(len(sample_cats) for sample_cats in annotations)
+        total_counts.append(str(total))
+    
+    majority_total = sum(len(sample_cats) for sample_cats in majority_annotations)
+    total_row = "Total & " + " & ".join(total_counts) + f" & {majority_total} \\\\"
+    lines.append(total_row)
+    
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    lines.append("\\end{table}")
+    lines.append("")
+    
+    # Table 2: Inter-annotator agreement metrics
+    lines.append("% Table 2: Inter-Annotator Agreement Metrics")
+    lines.append("\\begin{table}[htbp]")
+    lines.append("\\centering")
+    lines.append("\\caption{Inter-Annotator Agreement Metrics}")
+    lines.append("\\label{tab:inter_annotator_agreement}")
+    lines.append("\\begin{tabular}{lcc}")
+    lines.append("\\toprule")
+    lines.append("Category & Fleiss' Kappa & Interpretation \\\\")
+    lines.append("\\midrule")
+    
+    # Per-category Kappa
+    for cat in categories_to_analyze:
+        kappa = kappa_scores[cat]
+        
+        # Interpretation
+        if kappa < 0:
+            interpretation = "Poor"
+        elif kappa < 0.20:
+            interpretation = "Slight"
+        elif kappa < 0.40:
+            interpretation = "Fair"
+        elif kappa < 0.60:
+            interpretation = "Moderate"
+        elif kappa < 0.80:
+            interpretation = "Substantial"
+        else:
+            interpretation = "Almost Perfect"
+        
+        lines.append(f"{cat} & {kappa:.3f} & {interpretation} \\\\")
+    
+    lines.append("\\midrule")
+    lines.append(f"Average & {avg_kappa:.3f} & -- \\\\")
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    lines.append("\\end{table}")
+    lines.append("")
+    
+    # Table 3: Pairwise F1 scores
+    lines.append("% Table 3: Pairwise F1 Scores Between Annotators")
+    lines.append("\\begin{table}[htbp]")
+    lines.append("\\centering")
+    lines.append("\\caption{Pairwise F1 Scores Between Human Annotators}")
+    lines.append("\\label{tab:pairwise_f1}")
+    
+    # Create a matrix-style table
+    n_annotators = len(annotator_names)
+    lines.append("\\begin{tabular}{l" + "c" * n_annotators + "}")
+    lines.append("\\toprule")
+    
+    # Header row
+    header = " & " + " & ".join(annotator_names) + " \\\\"
+    lines.append(header)
+    lines.append("\\midrule")
+    
+    # Data rows
+    for i, name1 in enumerate(annotator_names):
+        row_values = []
+        for j, name2 in enumerate(annotator_names):
+            if i == j:
+                row_values.append("--")
+            elif i < j:
+                # Upper triangle: show F1 score
+                f1 = pairwise_f1_scores.get((name1, name2), 0.0)
+                row_values.append(f"{f1:.3f}")
+            else:
+                # Lower triangle: leave blank
+                row_values.append("")
+        
+        row = name1 + " & " + " & ".join(row_values) + " \\\\"
+        lines.append(row)
+    
+    lines.append("\\midrule")
+    lines.append(f"\\multicolumn{{{n_annotators + 1}}}{{l}}{{Average Pairwise F1: {avg_pairwise_f1:.3f}}} \\\\")
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    lines.append("\\end{table}")
+    lines.append("")
+    
+    # Combined summary table
+    lines.append("% Table 4: Summary of Human Annotation Statistics")
+    lines.append("\\begin{table}[htbp]")
+    lines.append("\\centering")
+    lines.append("\\caption{Summary of Human Annotation Statistics}")
+    lines.append("\\label{tab:human_annotation_summary}")
+    lines.append("\\begin{tabular}{lr}")
+    lines.append("\\toprule")
+    lines.append("Metric & Value \\\\")
+    lines.append("\\midrule")
+    
+    # Sample count
+    n_samples = len(all_human_annotations[0])
+    lines.append(f"Number of Samples & {n_samples} \\\\")
+    lines.append(f"Number of Annotators & {len(annotator_names)} \\\\")
+    lines.append(f"Number of Categories & {len(categories_to_analyze)} \\\\")
+    lines.append("\\midrule")
+    
+    # Agreement metrics
+    lines.append(f"Avg. Pairwise F1 & {avg_pairwise_f1:.3f} \\\\")
+    lines.append(f"Avg. Fleiss' Kappa & {avg_kappa:.3f} \\\\")
+    lines.append("\\midrule")
+    
+    # Annotation statistics
+    for i, name in enumerate(annotator_names):
+        total = sum(len(sample_cats) for sample_cats in all_human_annotations[i])
+        avg_per_sample = total / n_samples
+        lines.append(f"{name} Annotations (Total) & {total} \\\\")
+        lines.append(f"{name} Annotations (Avg/Sample) & {avg_per_sample:.2f} \\\\")
+    
+    majority_total = sum(len(sample_cats) for sample_cats in majority_annotations)
+    majority_avg = majority_total / n_samples
+    lines.append(f"Majority Vote (Total) & {majority_total} \\\\")
+    lines.append(f"Majority Vote (Avg/Sample) & {majority_avg:.2f} \\\\")
+    
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    lines.append("\\end{table}")
+    
+    latex_content = "\n".join(lines)
+    
+    # Save to file if specified
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write(latex_content)
+        print(f"\n✓ LaTeX table saved to: {output_file}")
+    
+    return latex_content
+
+
 def main():
     """Main function to compare human and machine annotations with IAA."""
     # Parse command-line arguments
@@ -406,7 +608,8 @@ def main():
     print(f"{'=' * 80}")
     
     annotator_names = ['Abukhanov', 'Hagenkort', 'Juharova']
-    pairwise_f1_scores = []
+    pairwise_f1_scores_list = []
+    pairwise_f1_scores_dict = {}
     
     for (i, name1), (j, name2) in combinations(enumerate(annotator_names), 2):
         metrics = calculate_pairwise_agreement(
@@ -414,7 +617,8 @@ def main():
             all_human_annotations[j],
             categories_to_analyze
         )
-        pairwise_f1_scores.append(metrics['macro_f1'])
+        pairwise_f1_scores_list.append(metrics['macro_f1'])
+        pairwise_f1_scores_dict[(name1, name2)] = metrics['macro_f1']
         
         print(f"\n{name1} vs {name2}:")
         print(f"  Macro F1: {metrics['macro_f1']:.4f}")
@@ -423,7 +627,7 @@ def main():
             cat_f1 = metrics['per_category'][cat]['f1']
             print(f"    {cat}: {cat_f1:.4f}")
     
-    avg_pairwise_f1 = statistics.mean(pairwise_f1_scores)
+    avg_pairwise_f1 = statistics.mean(pairwise_f1_scores_list)
     print(f"\n{'=' * 80}")
     print(f"Average Pairwise F1 Score: {avg_pairwise_f1:.4f}")
     print(f"{'=' * 80}")
@@ -434,10 +638,12 @@ def main():
     print(f"{'=' * 80}")
     print(f"\nPer-category Fleiss' Kappa:")
     
-    kappa_scores = []
+    kappa_scores_list = []
+    kappa_scores_dict = {}
     for cat in categories_to_analyze:
         kappa = calculate_fleiss_kappa_per_category(all_human_annotations, cat)
-        kappa_scores.append(kappa)
+        kappa_scores_list.append(kappa)
+        kappa_scores_dict[cat] = kappa
         
         # Interpretation
         if kappa < 0:
@@ -455,7 +661,7 @@ def main():
         
         print(f"  {cat}: {kappa:.4f} ({interpretation})")
     
-    avg_kappa = statistics.mean(kappa_scores)
+    avg_kappa = statistics.mean(kappa_scores_list)
     print(f"\nAverage Fleiss' Kappa: {avg_kappa:.4f}")
     
     # Create majority-vote baseline (at least 2/3 annotators)
@@ -620,6 +826,34 @@ def main():
         for i, result in enumerate(all_model_results[:3], 1):
             comparison = "above" if result['majority_f1'] > avg_pairwise_f1 else "below"
             print(f"  {i}. {result['model']}: F1 = {result['majority_f1']:.4f} ({comparison} human baseline)")
+    
+    # Generate LaTeX tables
+    print(f"\n{'=' * 80}")
+    print("GENERATING LATEX TABLES")
+    print(f"{'=' * 80}")
+    
+    results_dir = script_dir / 'results'
+    
+    # Determine output filename based on excluded categories
+    if excluded_categories:
+        excluded_str = '_excl_' + '_'.join(sorted(excluded_categories))
+        output_filename = f'human_annotation_stats{excluded_str}.tex'
+    else:
+        output_filename = 'human_annotation_stats.tex'
+    
+    output_path = results_dir / output_filename
+    
+    generate_latex_table(
+        all_human_annotations=all_human_annotations,
+        annotator_names=annotator_names,
+        categories_to_analyze=categories_to_analyze,
+        pairwise_f1_scores=pairwise_f1_scores_dict,
+        kappa_scores=kappa_scores_dict,
+        avg_pairwise_f1=avg_pairwise_f1,
+        avg_kappa=avg_kappa,
+        majority_annotations=majority_annotations,
+        output_file=output_path
+    )
     
     print(f"\n{'=' * 80}")
 

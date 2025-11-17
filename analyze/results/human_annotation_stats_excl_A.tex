@@ -1,0 +1,85 @@
+% Table 1: Annotation Counts per Category
+\begin{table}[htbp]
+\centering
+\caption{Human Annotation Statistics per Category}
+\label{tab:human_annotation_counts}
+\begin{tabular}{lrrrr}
+\toprule
+Category & Abukhanov & Hagenkort & Juharova & Majority (≥2/3) \\
+\midrule
+B & 45 & 24 & 77 & 45 \\
+C & 27 & 16 & 6 & 7 \\
+D & 20 & 55 & 37 & 35 \\
+E & 12 & 13 & 12 & 12 \\
+F & 13 & 15 & 16 & 12 \\
+\midrule
+Total & 117 & 123 & 148 & 111 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 2: Inter-Annotator Agreement Metrics
+\begin{table}[htbp]
+\centering
+\caption{Inter-Annotator Agreement Metrics}
+\label{tab:inter_annotator_agreement}
+\begin{tabular}{lcc}
+\toprule
+Category & Fleiss' Kappa & Interpretation \\
+\midrule
+B & -0.054 & Poor \\
+C & 0.024 & Slight \\
+D & 0.159 & Slight \\
+E & 0.599 & Moderate \\
+F & 0.467 & Moderate \\
+\midrule
+Average & 0.239 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 3: Pairwise F1 Scores Between Annotators
+\begin{table}[htbp]
+\centering
+\caption{Pairwise F1 Scores Between Human Annotators}
+\label{tab:pairwise_f1}
+\begin{tabular}{lccc}
+\toprule
+ & Abukhanov & Hagenkort & Juharova \\
+\midrule
+Abukhanov & -- & 0.447 & 0.419 \\
+Hagenkort &  & -- & 0.501 \\
+Juharova &  &  & -- \\
+\midrule
+\multicolumn{4}{l}{Average Pairwise F1: 0.455} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 4: Summary of Human Annotation Statistics
+\begin{table}[htbp]
+\centering
+\caption{Summary of Human Annotation Statistics}
+\label{tab:human_annotation_summary}
+\begin{tabular}{lr}
+\toprule
+Metric & Value \\
+\midrule
+Number of Samples & 100 \\
+Number of Annotators & 3 \\
+Number of Categories & 5 \\
+\midrule
+Avg. Pairwise F1 & 0.455 \\
+Avg. Fleiss' Kappa & 0.239 \\
+\midrule
+Abukhanov Annotations (Total) & 117 \\
+Abukhanov Annotations (Avg/Sample) & 1.17 \\
+Hagenkort Annotations (Total) & 123 \\
+Hagenkort Annotations (Avg/Sample) & 1.23 \\
+Juharova Annotations (Total) & 148 \\
+Juharova Annotations (Avg/Sample) & 1.48 \\
+Majority Vote (Total) & 111 \\
+Majority Vote (Avg/Sample) & 1.11 \\
+\bottomrule
+\end{tabular}
+\end{table}
