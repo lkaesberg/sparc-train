@@ -1,0 +1,112 @@
+% LaTeX tables for human annotation statistics
+
+% Generated automatically by generate_annotation_stats.py
+
+% Requires \usepackage{booktabs} in your LaTeX document
+
+
+% Main Statistics Table
+\begin{table}[htbp]
+\centering
+\caption{Human Annotation Dataset Statistics}
+\label{tab:annotation_stats}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Number of annotators & 3 \\
+Samples per annotator & 100 \\
+Overlapping samples & 86 \\
+Total annotations collected & 300 \\
+\midrule
+Avg. failure types per sample & 1.45 $\pm$ 0.13 \\
+Failure types range & 0--3 \\
+\midrule
+Inter-annotator agreement (F1) & 0.399 $\pm$ 0.078 \\
+Agreement range (F1) & 0.337--0.487 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% Failure Type Distribution Table
+\begin{table}[htbp]
+\centering
+\caption{Aggregated Failure Type Distribution}
+\label{tab:failure_distribution}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Failure Type} & \textbf{Count} & \textbf{Prevalence} & \textbf{Avg. per Sample} \\
+\midrule
+A: Planning/Logical Flaw & 46 & 15.3\% & 0.15 \\
+B: Misunderstood Rule & 146 & 48.7\% & 0.49 \\
+C: Spatial Misjudgment & 49 & 16.3\% & 0.16 \\
+D: Premature Verification & 112 & 37.3\% & 0.37 \\
+E: No Correction & 37 & 12.3\% & 0.12 \\
+F: Coordinate Error & 44 & 14.7\% & 0.15 \\
+\midrule
+\textbf{Total} & 434 & --- & 1.45 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% Difficulty Distribution Table
+\begin{table}[htbp]
+\centering
+\caption{Sample Distribution by Difficulty Level}
+\label{tab:difficulty_distribution}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Difficulty Level} & \textbf{Samples} & \textbf{Percentage} \\
+\midrule
+1 & 60 & 20.0\% \\
+2 & 60 & 20.0\% \\
+3 & 60 & 20.0\% \\
+4 & 60 & 20.0\% \\
+5 & 60 & 20.0\% \\
+\midrule
+\textbf{Total} & 300 & 100.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% Failure Co-occurrence Table
+\begin{table}[htbp]
+\centering
+\caption{Failure Type Co-occurrence Matrix}
+\label{tab:failure_cooccurrence}
+\begin{tabular}{lcccccc}
+\toprule
+& \textbf{A} & \textbf{B} & \textbf{C} & \textbf{D} & \textbf{E} & \textbf{F} \\
+\midrule
+\textbf{A} & --- & 11 & 2 & 8 & 2 & 1 \\
+\textbf{B} & --- & --- & 21 & 49 & 10 & 13 \\
+\textbf{C} & --- & --- & --- & 10 & 5 & 5 \\
+\textbf{D} & --- & --- & --- & --- & 6 & 7 \\
+\textbf{E} & --- & --- & --- & --- & --- & 2 \\
+\textbf{F} & --- & --- & --- & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% Category Agreement Table
+\begin{table}[htbp]
+\centering
+\caption{Per-Category Agreement Rates}
+\label{tab:category_agreement}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Failure Type} & \textbf{Agreement Rate} & \textbf{Prevalence} \\
+\midrule
+A: Planning/Logical Flaw & 61.6\% & 33 \\
+B: Misunderstood Rule & 23.3\% & 77 \\
+C: Spatial Misjudgment & 59.3\% & 36 \\
+D: Premature Verification & 43.0\% & 57 \\
+E: No Correction & 86.0\% & 18 \\
+F: Coordinate Error & 77.9\% & 25 \\
+\bottomrule
+\end{tabular}
+\end{table}
