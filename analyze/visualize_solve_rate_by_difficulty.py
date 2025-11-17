@@ -15,6 +15,7 @@ from plot_config import (
     COLUMN_WIDTH_INCHES,
     MODEL_COLORS,
     get_model_color,
+    get_training_method_color,
 )
 
 
@@ -244,22 +245,15 @@ def create_visualization(output_dir):
     grpo_l_delta = [grpo_l_deltas_dict.get(d, 0) for d in difficulties]
     sbs_delta = [sbs_deltas_dict.get(d, 0) for d in difficulties]
     
-    # Define colors using Seaborn Set2 palette
-    import matplotlib.colors as mcolors
-    set2_colors = plt.cm.Set2.colors
-    color_sft = mcolors.rgb2hex(set2_colors[0])       # Teal/green
-    color_grpo_l = mcolors.rgb2hex(set2_colors[1])    # Orange
-    color_sbs = mcolors.rgb2hex(set2_colors[2])       # Green
-    
-    # Create line plots with markers for deltas
+    # Create line plots with markers for deltas using consistent colors from plot_config
     ax.plot(difficulties, sft_delta, marker='s', linewidth=1.5,
-            label='SFT', color=color_sft, markersize=4,
+            label='SFT', color=get_training_method_color('SFT'), markersize=4,
             markeredgecolor='white', markeredgewidth=0.8)
     ax.plot(difficulties, grpo_l_delta, marker='^', linewidth=1.5,
-            label='GRPO', color=color_grpo_l, markersize=5,
+            label='GRPO', color=get_training_method_color('GRPO'), markersize=5,
             markeredgecolor='white', markeredgewidth=0.8)
     ax.plot(difficulties, sbs_delta, marker='D', linewidth=1.5,
-            label='Step-by-Step', color=color_sbs, markersize=3.5,
+            label='Step-by-Step', color=get_training_method_color('Step-by-step'), markersize=3.5,
             markeredgecolor='white', markeredgewidth=0.8)
     
     # Add horizontal line at y=0 (baseline)

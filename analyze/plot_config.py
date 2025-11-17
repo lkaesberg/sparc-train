@@ -96,6 +96,15 @@ MODEL_COLORS = {
 # Fallback color for undefined models - VERY OBVIOUS!
 MODEL_COLOR_FALLBACK = "#FF00FF"  # Bright Magenta - impossible to miss!
 
+# Training method colors - Based on Seaborn Set2 palette
+TRAINING_METHOD_COLORS = {
+    "Baseline": "#8DA0CB",      # Blue-purple
+    "SFT": "#FC8D62",           # Orange
+    "GRPO": "#66C2A5",          # Teal
+    "GRPO-L": "#66C2A5",        # Teal (same as GRPO)
+    "Step-by-step": "#E78AC3",  # Pink
+}
+
 
 def get_model_color(model_name, warn_on_missing=True):
     """
@@ -117,6 +126,42 @@ def get_model_colors(model_names, warn_on_missing=True):
     Get colors for multiple models.
     """
     return [get_model_color(name, warn_on_missing) for name in model_names]
+
+
+def get_training_method_color(method_name, warn_on_missing=True):
+    """
+    Get the color for a specific training method from the TRAINING_METHOD_COLORS dict.
+    
+    Args:
+        method_name: Training method name (e.g., 'Baseline', 'SFT', 'GRPO', 'Step-by-step')
+        warn_on_missing: Whether to print warning if method not found
+    
+    Returns:
+        Hex color string
+    """
+    if method_name in TRAINING_METHOD_COLORS:
+        return TRAINING_METHOD_COLORS[method_name]
+    
+    if warn_on_missing:
+        print(f"⚠️  WARNING: No color defined for training method '{method_name}'!")
+        print(f"   Using fallback color {MODEL_COLOR_FALLBACK} (bright magenta)")
+        print(f"   Please add '{method_name}' to TRAINING_METHOD_COLORS in plot_config.py")
+    
+    return MODEL_COLOR_FALLBACK
+
+
+def get_training_method_colors(method_names, warn_on_missing=True):
+    """
+    Get colors for multiple training methods.
+    
+    Args:
+        method_names: List of training method names
+        warn_on_missing: Whether to print warning if methods not found
+    
+    Returns:
+        List of hex color strings
+    """
+    return [get_training_method_color(name, warn_on_missing) for name in method_names]
 
 
 def get_model_imagebox(model_name):

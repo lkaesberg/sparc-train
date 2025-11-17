@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 from pathlib import Path
-from plot_config import setup_plot_style, COLUMN_WIDTH_INCHES
+from plot_config import setup_plot_style, COLUMN_WIDTH_INCHES, get_training_method_color
 
 # Setup plot style
 setup_plot_style(use_latex=True)
@@ -69,14 +69,14 @@ def generate_averaged_config_plot(results_dir, output_dir):
         'GRPO': 'lkaesberg_Qwen3-{size}-SPaRC-GRPO_stats.csv',
     }
     
-    # Define colors for configurations
+    # Define colors for configurations using centralized color scheme
     config_colors = {
-        'Baseline': '#B0B0B0',  # Gray for baseline
-        'SFT': '#E8B4FA',       # Light purple
-        'GRPO': '#C78EF0',      # Medium purple
-        'GRPO-8E': '#A47AFF',   # Purple
-        'GRPO-16R': '#8B5FE8',  # Dark purple
-        'GRPO-L': '#7E4FD9',    # Darkest purple
+        'Baseline': get_training_method_color('Baseline'),
+        'SFT': get_training_method_color('SFT'),
+        'GRPO': get_training_method_color('GRPO'),
+        'GRPO-8E': get_training_method_color('GRPO'),  # Same as GRPO
+        'GRPO-16R': get_training_method_color('GRPO'), # Same as GRPO
+        'GRPO-L': get_training_method_color('GRPO-L'),
     }
     
     config_markers = {
