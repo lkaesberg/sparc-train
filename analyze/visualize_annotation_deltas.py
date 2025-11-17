@@ -229,7 +229,7 @@ def create_delta_chart(results_dir, output_path=None, exclude_categories=None,
     # Create figure with height ratios (1 for baseline, N for variants)
     fig = plt.figure(figsize=(fig_width, fig_height))
     gs = fig.add_gridspec(2, n_categories, height_ratios=[1, len(variants)], 
-                         hspace=0.35, wspace=0.15)
+                         hspace=0.35, wspace=0.25)
     axes = np.array([[fig.add_subplot(gs[i, j]) for j in range(n_categories)] for i in range(2)])
     
     # Ensure axes is 2D array even for single column
