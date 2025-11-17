@@ -222,14 +222,14 @@ def create_delta_chart(results_dir, output_path=None, exclude_categories=None,
     
     # Calculate figure dimensions
     fig_width = TEXT_WIDTH_INCHES
-    row_height = 0.35  # inches per bar row
-    fig_height = (1 + len(variants)) * row_height + 0.6  # 1 baseline + N variants + spacing
+    row_height = 0.28  # inches per bar row (more compact)
+    fig_height = (1 + len(variants)) * row_height + 0.4  # 1 baseline + N variants + spacing
     print(f"Figure size: {fig_width:.2f} x {fig_height:.2f} inches")
     
     # Create figure with height ratios (1 for baseline, N for variants)
     fig = plt.figure(figsize=(fig_width, fig_height))
     gs = fig.add_gridspec(2, n_categories, height_ratios=[1, len(variants)], 
-                         hspace=0.5, wspace=0.15)
+                         hspace=0.35, wspace=0.15)
     axes = np.array([[fig.add_subplot(gs[i, j]) for j in range(n_categories)] for i in range(2)])
     
     # Ensure axes is 2D array even for single column
@@ -336,11 +336,6 @@ def create_delta_chart(results_dir, output_path=None, exclude_categories=None,
         
         ax.set_xlabel('$\\Delta$ Error Rate (\\%)')
         ax.axvline(0, color='black', linewidth=0.5, linestyle='-')
-        
-        # Add separator line between SFT and GRPO variants
-        if 'SFT' in variants and any('GRPO' in v for v in variants):
-            sft_idx = variants.index('SFT')
-            ax.axhline(sft_idx + 0.5, color='gray', linewidth=1.0, linestyle='--', alpha=0.5)
         
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)

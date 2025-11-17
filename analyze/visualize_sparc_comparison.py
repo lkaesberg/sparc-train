@@ -176,13 +176,13 @@ def create_comparison_chart(results_dir, output_path=None, model_sizes=None):
     fig_width = TEXT_WIDTH_INCHES
     # Top plot has 1 bar, bottom plot has 6 bars - use height ratio 1:6
     # Compact layout: less spacing, tighter bars
-    row_height = 0.35  # inches per bar row (reduced from 0.5)
-    fig_height = 7 * row_height + 0.6  # 7 total bar rows + minimal spacing
+    row_height = 0.28  # inches per bar row (more compact)
+    fig_height = 7 * row_height + 0.4  # 7 total bar rows + minimal spacing
     print(f"Figure size: {fig_width:.2f} x {fig_height:.2f} inches")
     
     # Create figure with height ratios (1 for top, 6 for bottom)
     fig = plt.figure(figsize=(fig_width, fig_height))
-    gs = fig.add_gridspec(2, n_models, height_ratios=[1, 6], hspace=0.5, wspace=0.15)
+    gs = fig.add_gridspec(2, n_models, height_ratios=[1, 6], hspace=0.35, wspace=0.15)
     axes = np.array([[fig.add_subplot(gs[i, j]) for j in range(n_models)] for i in range(2)])
     
     # Adjust spacing (already set in gridspec)
