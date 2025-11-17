@@ -692,11 +692,17 @@ def create_efficiency_plot(all_stats, sparc_dir, step_by_step_dir, output_dir):
                 'tokens': tokens
             })
     
-    # Create DataFrame
+    # Create DataFrame and aggregate across all difficulties
     df = pd.DataFrame(data_points)
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH_INCHES, COLUMN_WIDTH_INCHES))
+    # Aggregate by configuration (average across all difficulties)
+    df_agg = df.groupby('config').agg({
+        'accuracy': 'mean',
+        'tokens': 'mean'
+    }).reset_index()
+    
+    # Create figure with reduced height
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH_INCHES, COLUMN_WIDTH_INCHES * 0.8))
     
     # Define colors using Seaborn Set2 palette
     import matplotlib.colors as mcolors
@@ -704,65 +710,70 @@ def create_efficiency_plot(all_stats, sparc_dir, step_by_step_dir, output_dir):
     
     config_styles = {
         'Baseline': {
-            'color': mcolors.rgb2hex(set2_colors[7]),
+            'color': mcolors.rgb2hex(set2_colors[3]),  # Pink/red
             'marker': 'o',
         },
         'SFT': {
-            'color': mcolors.rgb2hex(set2_colors[0]),
+            'color': mcolors.rgb2hex(set2_colors[0]),  # Teal
             'marker': 's',
         },
         'GRPO': {
-            'color': mcolors.rgb2hex(set2_colors[1]),
+            'color': mcolors.rgb2hex(set2_colors[1]),  # Orange
             'marker': '^',
         },
         'Step-by-step': {
-            'color': mcolors.rgb2hex(set2_colors[2]),
+            'color': mcolors.rgb2hex(set2_colors[2]),  # Green
             'marker': 'D',
         }
     }
     
-    # Plot each configuration
+    # Plot each configuration (one point per configuration)
     for config in ['Baseline', 'SFT', 'GRPO', 'Step-by-step']:
-        config_data = df[df['config'] == config]
+        config_data = df_agg[df_agg['config'] == config]
         if len(config_data) == 0:
             continue
         
         style = config_styles.get(config, {})
         
-        # Plot with marker size proportional to difficulty
-        sizes = [(d * 20) for d in config_data['difficulty']]
+        # Get the single point for this configuration
+        accuracy = config_data['accuracy'].values[0]
+        tokens = config_data['tokens'].values[0]
         
-        scatter = ax.scatter(
-            config_data['accuracy'],
-            config_data['tokens'],
-            s=sizes,
+        # Plot marker (no transparency)
+        ax.scatter(
+            accuracy,
+            tokens,
+            s=80,
             color=style.get('color'),
             marker=style.get('marker', 'o'),
-            alpha=0.7,
+            alpha=1.0,
             edgecolors='white',
-            linewidths=1.2,
+            linewidths=1.5,
             label=config,
             zorder=3
         )
         
-        # Add difficulty labels centered in markers
-        for _, row in config_data.iterrows():
-            ax.text(
-                row['accuracy'],
-                row['tokens'],
-                str(row['difficulty']),
-                fontsize=6,
-                ha='center',
-                va='center_baseline',
-                color='white' if row['tokens'] > 15000 else 'black',
-                fontweight='bold',
-                zorder=4
-            )
+        # Add label next to the marker (closer)
+        ax.text(
+            accuracy + 0.8,  # smaller offset to the right
+            tokens,
+            config,
+            fontsize=9,
+            ha='left',
+            va='center',
+            color='black',
+            fontweight='normal',
+            zorder=4
+        )
     
     # Formatting
     ax.set_xlabel('Accuracy (\\%)', fontsize=10)
     ax.set_ylabel(r'Tokens per Answer ($\times$1000)', fontsize=10)
     #ax.set_yscale('log')
+    
+    # Set x and y limits to start at 0
+    ax.set_xlim(0, 18)
+    ax.set_ylim(0, None)
     
     # Format y-axis to show ALL values in thousands with one decimal
     from matplotlib.ticker import FuncFormatter
@@ -770,9 +781,9 @@ def create_efficiency_plot(all_stats, sparc_dir, step_by_step_dir, output_dir):
         return f'{x/1000:.1f}'
     ax.yaxis.set_major_formatter(FuncFormatter(format_thousands_y))
     
-    # Legend below the chart
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), 
-              ncol=2, frameon=False, fontsize=10)
+    # No legend needed since we have labels next to points
+    # ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), 
+    #           ncol=2, frameon=False, fontsize=10)
     
     # Grid
     ax.grid(True, alpha=0.3, linestyle='--', which='both')
